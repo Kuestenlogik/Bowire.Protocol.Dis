@@ -1,0 +1,70 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.cs]
+# CA2007: Consider calling ConfigureAwait on the awaited task
+# Not applicable in ASP.NET / plugin code where we want the synchronization context.
+dotnet_diagnostic.CA2007.severity = none
+
+# CA1031: Do not catch general exception types
+# Plugin shutdown / background loops must swallow to finish cleanly.
+dotnet_diagnostic.CA1031.severity = none
+
+# CA1848: Use the LoggerMessage delegates
+# Source-generated LoggerMessage is overkill for this plugin's log volume.
+dotnet_diagnostic.CA1848.severity = none
+
+# CA1062: Validate arguments of public methods - handled by nullable reference types
+dotnet_diagnostic.CA1062.severity = none
+
+[tests/**/*.cs]
+# CA1707: Identifiers should not contain underscores - test methods use underscores by convention
+dotnet_diagnostic.CA1707.severity = none
+# CA1030: false positive on test methods whose subject happens to
+# start with "Fire" (like FirePdu tests). Events-vs-methods heuristic
+# doesn't apply to test verification code.
+dotnet_diagnostic.CA1030.severity = none
+
+[tools/**/*.cs]
+# One-shot generators: the usual perf / locale hygiene rules
+# aren't load-bearing for code that runs once and writes files.
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1852.severity = none
+dotnet_diagnostic.CA1812.severity = none
+
+[src/Kuestenlogik.Bowire.Protocol.Dis/Enumerations/*.cs]
+# CA1707: DIS enums mirror IEEE 1278.1 version names (Ieee1278_1_1995 etc.) —
+# the underscores are part of the standard's identifier.
+dotnet_diagnostic.CA1707.severity = none
+# CA1027: DisPduType etc. are wire-code enums, not bitflags.
+dotnet_diagnostic.CA1027.severity = none
+# CA1069: PDU type ids are family-scoped — Collision-Elastic (family 1 / id 40)
+# and Minefield Response NACK (family 8 / id 40) genuinely share the code
+# per IEEE 1278.1 §5.3.
+dotnet_diagnostic.CA1069.severity = none
+# CA1711: DIS uses "Flag" suffixes on 16-bit enumeration fields
+# (AcknowledgeFlag, ResponseFlag). The spec names take precedence
+# over the .NET naming convention.
+dotnet_diagnostic.CA1711.severity = none
+
+[**/Pdu/**.cs]
+# CA1819: PDU record fields that are fixed-length byte arrays per the
+# DIS spec (dead-reckoning "other parameters", 15 bytes) are exposed
+# as byte[] for ergonomic access; wrapping them in ReadOnlyMemory
+# would complicate marshaling for no real safety gain since these
+# are wire-format value containers.
+dotnet_diagnostic.CA1819.severity = none
+
+[**/Records/*.cs]
+# CA1819: Variable Parameter records carry fixed-length byte blobs
+# (15-byte content slots, 6-byte pads) that need to round-trip
+# verbatim. Exposing them as byte[] is the simplest wire-format
+# shape.
+dotnet_diagnostic.CA1819.severity = none

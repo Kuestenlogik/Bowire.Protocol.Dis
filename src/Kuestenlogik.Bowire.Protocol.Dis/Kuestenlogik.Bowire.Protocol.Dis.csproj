@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Bowire DIS protocol plugin — IEEE 1278.1 Distributed Interactive Simulation. UDP multicast replay of captured PDU sequences so simulation stacks can test against reproducible traffic without a live exercise.</Description>
+    <PackageId>Kuestenlogik.Bowire.Protocol.Dis</PackageId>
+    <PackageTags>bowire;bowire-plugin;dis;ieee-1278;simulation;udp;multicast;developer-tools</PackageTags>
+    <IsPackable>true</IsPackable>
+    <!-- CA1873 fires on logger calls whose structured arguments are
+         property accesses — immaterial at this plugin's log volume,
+         and the source-generated LoggerMessage alternative is
+         overkill for a background broadcast scheduler. -->
+    <NoWarn>$(NoWarn);CA1873</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Spec-fixture tests pin the exact wire bytes of individual
+         records; they need access to the internal Marshal helpers. -->
+    <InternalsVisibleTo Include="Kuestenlogik.Bowire.Protocol.Dis.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only the Bowire contract package. The mock-emitter contract
+         types (IBowireMockEmitter, BowireRecording, MockEmitterOptions)
+         live in the Kuestenlogik.Bowire.Mocking namespace inside Kuestenlogik.Bowire since
+         v0.2, so plugins never inherit the heavy mock-server deps
+         (gRPC, MQTTnet, GraphQL, OpenAPI) just to implement the
+         emitter interface. -->
+    <PackageReference Include="Kuestenlogik.Bowire" />
+  </ItemGroup>
+
+</Project>

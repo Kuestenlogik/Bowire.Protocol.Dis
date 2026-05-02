@@ -1,0 +1,44 @@
+{
+  "id": "rec_dis_convoy",
+  "name": "dis convoy sample",
+  "description": "Three Entity State PDUs broadcast on 239.1.2.3:3000, stepping an M1 tank ~100m/update.",
+  "createdAt": 1776945600000,
+  "recordingFormatVersion": 2,
+  "steps": [
+    {
+      "id": "pdu_00",
+      "capturedAt": 0,
+      "protocol": "dis",
+      "service": "EntityState",
+      "method": "Send",
+      "methodType": "Unary",
+      "status": "OK",
+      "responseBinary": "BgEBAQAAAAAAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAAAAAAAAAAAAAAAAAQUy5hAAAAABBJCwQAAAAAEFTfEgAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA",
+      "metadata": {
+        "multicast-group": "239.1.2.3",
+        "port": "3000",
+        "ttl": "1"
+      }
+    },
+    {
+      "id": "pdu_01",
+      "capturedAt": 100,
+      "protocol": "dis",
+      "service": "EntityState",
+      "method": "Send",
+      "methodType": "Unary",
+      "status": "OK",
+      "responseBinary": "BgEBAQAAAAAAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAAAAAAAAAAAAAAAAAQUy5tgAAAABBJCx0AAAAAEFTfEgAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA"
+    },
+    {
+      "id": "pdu_02",
+      "capturedAt": 200,
+      "protocol": "dis",
+      "service": "EntityState",
+      "method": "Send",
+      "methodType": "Unary",
+      "status": "OK",
+      "responseBinary": "BgEBAQAAAAAAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAAAAAAAAAAAAAAAAAQUy56AAAAABBJCzYAAAAAEFTfEgAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Kuestenlogik.Bowire.Protocol.Dis.Tools.SisoGen</RootNamespace>
+
+    <!-- Package as a global / local dotnet tool so plugin authors
+         can install the tool from NuGet and run siso-gen from any
+         repo without cloning the DIS plugin's source. -->
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>siso-gen</ToolCommandName>
+
+    <PackageId>Kuestenlogik.Bowire.Protocol.Dis.SisoGen</PackageId>
+    <Description>One-shot code generator that turns the canonical SISO-REF-010 XML into C# enums for Bowire's DIS plugin (and any downstream project using compatible enum shapes). Install as a .NET tool: `dotnet tool install -g Kuestenlogik.Bowire.Protocol.Dis.SisoGen`, then run `siso-gen --xml SISO-REF-010.xml --out Enums/Generated`.</Description>
+    <PackageTags>bowire;dis;siso;codegen;dotnet-tool;simulation</PackageTags>
+  </PropertyGroup>
+
+</Project>
