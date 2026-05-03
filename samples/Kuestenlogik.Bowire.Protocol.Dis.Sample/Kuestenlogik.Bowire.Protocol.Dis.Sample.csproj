@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- Sample-app code, not a library: CA1515 (make types internal)
+         and CA1812 (uninstantiated internal class — host activates the
+         hosted service via DI) don't apply. CA1873 (defer evaluation
+         of logger arguments) is overkill at this sample's log volume —
+         a 3-PDU loop with one log per Nth emit. -->
+    <NoWarn>$(NoWarn);CA1515;CA1812;CA1873</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Kuestenlogik.Bowire" />
+    <ProjectReference Include="..\..\src\Kuestenlogik.Bowire.Protocol.Dis\Kuestenlogik.Bowire.Protocol.Dis.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The recording lives one level up so it can stay shared with
+         other consumers (tests, mock-server demos). Copy it next to the
+         binary so the replayer can find it via AppContext.BaseDirectory
+         at runtime. -->
+    <Content Include="..\convoy.bowire-recording.json"
+             Link="convoy.bowire-recording.json"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

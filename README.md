@@ -85,6 +85,16 @@ Each step carries:
 Use `bowire mock --recording my-exercise.bowire-recording.json`
 to start replay. `--loop` re-emits the sequence on repeat.
 
+## Sample
+
+A runnable end-to-end sample lives under [`samples/Kuestenlogik.Bowire.Protocol.Dis.Sample`](samples/Kuestenlogik.Bowire.Protocol.Dis.Sample) — an ASP.NET Core host that replays the bundled `convoy.bowire-recording.json` capture as a live multicast stream so the DIS tab has something deterministic to subscribe to without a running exercise. Loops on EOF so the feed never goes quiet.
+
+```bash
+dotnet run --project samples/Kuestenlogik.Bowire.Protocol.Dis.Sample
+```
+
+Then point Bowire's DIS tab at the multicast group + port the replayer logs at startup (defaults to `dis://239.1.2.3:3000`).
+
 ## Install
 
 ```bash
