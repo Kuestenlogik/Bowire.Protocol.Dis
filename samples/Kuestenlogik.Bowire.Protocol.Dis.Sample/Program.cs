@@ -7,6 +7,10 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Kuestenlogik.Bowire;
+// Force the DIS plugin assembly to load before AddBowire's reflection
+// scan runs — without an explicit type reference the JIT only loads
+// the plugin DLL on first use, too late for the discovery pass.
+_ = typeof(Kuestenlogik.Bowire.Protocol.Dis.BowireDisProtocol);
 
 // Replays the bundled `convoy.bowire-recording.json` capture as a live
 // DIS multicast stream so the Bowire workbench's DIS tab has something
@@ -31,7 +35,14 @@ builder.Services.AddBowire();
 builder.Services.AddHostedService<ConvoyReplayer>();
 
 var app = builder.Build();
-app.MapBowire();
+// Pre-seed the convoy multicast group as a discovered ServerUrl so
+// the workbench shows a DIS listener entry the moment the page
+// loads — the user doesn't need to type the URL into "Add server
+// URL" first.
+app.MapBowire(options =>
+{
+    options.ServerUrls.Add("dis://239.1.2.3:3000");
+});
 
 app.Run();
 
