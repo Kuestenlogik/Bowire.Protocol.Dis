@@ -1,5 +1,10 @@
 # Kuestenlogik.Bowire.Protocol.Dis
 
+[![CI](https://img.shields.io/github/actions/workflow/status/Kuestenlogik/Bowire.Protocol.Dis/ci.yml?branch=main&label=CI)](https://github.com/Kuestenlogik/Bowire.Protocol.Dis/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Kuestenlogik/Bowire.Protocol.Dis/branch/main/graph/badge.svg)](https://codecov.io/gh/Kuestenlogik/Bowire.Protocol.Dis)
+[![NuGet](https://img.shields.io/nuget/v/Kuestenlogik.Bowire.Protocol.Dis)](https://www.nuget.org/packages/Kuestenlogik.Bowire.Protocol.Dis)
+[![License](https://img.shields.io/github/license/Kuestenlogik/Bowire.Protocol.Dis)](https://github.com/Kuestenlogik/Bowire.Protocol.Dis/blob/main/LICENSE)
+
 Bowire protocol plugin for **IEEE 1278.1 Distributed Interactive
 Simulation (DIS)**.
 
