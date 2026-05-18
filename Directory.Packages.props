@@ -1,9 +1,6 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <!-- Required so the floating "1.4.*" pin on Kuestenlogik.Bowire below
-         resolves under Central Package Management (NU1011 otherwise). -->
-    <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
   </PropertyGroup>
   <ItemGroup>
     <!-- Bowire contract package. Also carries the mock-emitter contract
@@ -12,7 +9,7 @@
          interface. During local development consume from
          ../Bowire/artifacts/packages (see nuget.config); release
          builds resolve the same id from nuget.org. -->
-    <PackageVersion Include="Kuestenlogik.Bowire" Version="1.4.*" />
+    <PackageVersion Include="Kuestenlogik.Bowire" Version="1.4.4" />
 
     <!-- Test-only -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
