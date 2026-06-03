@@ -9,7 +9,7 @@
          interface. During local development consume from
          ../Bowire/artifacts/packages (see nuget.config); release
          builds resolve the same id from nuget.org. -->
-    <PackageVersion Include="Kuestenlogik.Bowire" Version="1.6.1" />
+    <PackageVersion Include="Kuestenlogik.Bowire" Version="1.7.0" />
 
     <!-- Test-only -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
