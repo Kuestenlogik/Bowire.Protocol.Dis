@@ -29,10 +29,17 @@ dis://multicast               # shortcut for 239.1.2.3 (default port)
 ```
 
 The default group is `239.1.2.3` and the default port is `3000`
-(IEEE 1278 convention). The probe duration during discovery is
-configurable via the plugin's `probeDuration` setting (defaults to 3
-seconds — long enough to catch a heartbeat from every active entity,
-short enough that the workbench feels responsive).
+(IEEE 1278 convention). Discovery listens for 3 seconds — long enough
+to catch a heartbeat from every active entity, short enough that the
+workbench feels responsive.
+
+> **`probeDuration` is not configurable yet.** The plugin declares the
+> setting and the workbench renders it, but no value ever reaches the
+> plugin: settings are stored in the browser and there is no channel
+> back to the server. The control looks like it works, and does not.
+> Tracked in [Kuestenlogik/Bowire#640](https://github.com/Kuestenlogik/Bowire/issues/640)
+> and [#21](https://github.com/Kuestenlogik/Bowire.Protocol.Dis/issues/21);
+> until then, treat the probe window as fixed at 3 seconds.
 
 ## Live discovery
 
