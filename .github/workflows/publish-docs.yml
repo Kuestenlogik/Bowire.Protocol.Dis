@@ -1,0 +1,44 @@
+# Tell Bowire that this plugin's documentation changed.
+#
+# The page under docs/protocol.md is this repository's contribution to
+# bowire.io. The site fetches it at build time, so it only appears once a
+# Bowire docs build runs — this dispatch is what makes that happen promptly
+# instead of waiting for the daily rebuild.
+#
+# Requires a BOWIRE_DOCS_DISPATCH_TOKEN secret with `repo` scope on
+# Kuestenlogik/Bowire. Without it the step warns and stops: a missing token
+# means the page is a day late, which is not worth failing a build over.
+
+name: Publish docs to bowire.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/protocol.md'
+      - '.github/workflows/publish-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Dispatch plugin-docs-updated
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tell Bowire to rebuild the site
+        env:
+          TOKEN: ${{ secrets.BOWIRE_DOCS_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::BOWIRE_DOCS_DISPATCH_TOKEN is not set — the page will appear on the next daily bowire.io build."
+            exit 0
+          fi
+          curl -sS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $TOKEN" \
+            https://api.github.com/repos/Kuestenlogik/Bowire/dispatches \
+            -d '{"event_type":"plugin-docs-updated"}' \
+            --fail-with-body
+          echo "Dispatched plugin-docs-updated."
