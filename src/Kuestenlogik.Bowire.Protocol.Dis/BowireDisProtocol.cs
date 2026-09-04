@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Kuestenlogik.Bowire;
 using Kuestenlogik.Bowire.Models;
+using Kuestenlogik.Bowire.Plugins;
 using Kuestenlogik.Bowire.Protocol.Dis.Enumerations;
 using Kuestenlogik.Bowire.Protocol.Dis.Pdu;
 using Kuestenlogik.Bowire.Protocol.Dis.Records;
@@ -66,6 +67,32 @@ public sealed class BowireDisProtocol : IBowireProtocol
             "number", 3),
     ];
 
+    /// <summary>
+    /// Resolved in <see cref="Initialize"/>; null when the host registered
+    /// none, which is every call before #640 and still the CLI's case.
+    /// </summary>
+    private IBowirePluginSettings? _settings;
+
+    /// <inheritdoc />
+    public void Initialize(IServiceProvider? serviceProvider)
+        => _settings = serviceProvider?.GetService(typeof(IBowirePluginSettings)) as IBowirePluginSettings;
+
+    /// <summary>
+    /// How long to listen on the group, per the workspace's setting
+    /// (Kuestenlogik/Bowire#640).
+    /// </summary>
+    /// <remarks>
+    /// This plugin declared <c>probeDuration</c> and then hardcoded three
+    /// seconds, which read as a forgotten line here and was not: nothing
+    /// upstream carried a value back to any plugin, so the same gap existed
+    /// in MQTT, NATS and SOAP independently. Someone who raised the window
+    /// because discovery missed an entity watched the value persist across
+    /// reloads and concluded the entity was not there.
+    /// </remarks>
+    private TimeSpan ProbeDuration()
+        => _settings?.GetSeconds(Id, "probeDuration", TimeSpan.FromSeconds(3))
+            ?? TimeSpan.FromSeconds(3);
+
     /// <inheritdoc />
     public async Task<List<BowireServiceInfo>> DiscoverAsync(
         string serverUrl, bool showInternalServices, CancellationToken ct = default)
@@ -85,7 +112,7 @@ public sealed class BowireDisProtocol : IBowireProtocol
         try
         {
             observed = await DisNetworkProbe.ObserveAsync(
-                endpoint.Value, TimeSpan.FromSeconds(3), ct);
+                endpoint.Value, ProbeDuration(), ct);
         }
         catch (OperationCanceledException)
         {
