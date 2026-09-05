@@ -270,8 +270,22 @@ public sealed class BowireDisProtocol : IBowireProtocol
             new BowireFieldInfo("marking", 7, "string", "LABEL_OPTIONAL", false, false, null, null),
             new BowireFieldInfo("force", 8, "string", "LABEL_OPTIONAL", false, false, null, null),
             new BowireFieldInfo("entityType", 9, "string", "LABEL_OPTIONAL", false, false, null, null),
-            new BowireFieldInfo("bytes", 10, "int32", "LABEL_OPTIONAL", false, false, null, null),
-            new BowireFieldInfo("raw", 11, "string", "LABEL_OPTIONAL", false, false, null, null)
+            new BowireFieldInfo("latitude", 10, "double", "LABEL_OPTIONAL", false, false, null, null)
+            {
+                Description = "WGS84 latitude in degrees, converted from the PDU's geocentric "
+                    + "EntityLocation. Null for non-EntityState PDUs and for an unpopulated location.",
+            },
+            new BowireFieldInfo("longitude", 11, "double", "LABEL_OPTIONAL", false, false, null, null)
+            {
+                Description = "WGS84 longitude in degrees. Paired with latitude — Bowire's "
+                    + "coordinate.wgs84 detector needs both at the same parent to mount the map.",
+            },
+            new BowireFieldInfo("altitude", 12, "double", "LABEL_OPTIONAL", false, false, null, null)
+            {
+                Description = "Height above the WGS84 ellipsoid, in metres.",
+            },
+            new BowireFieldInfo("bytes", 13, "int32", "LABEL_OPTIONAL", false, false, null, null),
+            new BowireFieldInfo("raw", 14, "string", "LABEL_OPTIONAL", false, false, null, null)
             {
                 Description = "Base64 of the full PDU bytes. Always present so the UI can hex-dump it.",
             },
@@ -332,6 +346,9 @@ public sealed class BowireDisProtocol : IBowireProtocol
         string? marking = null;
         string? force = null;
         string? entityType = null;
+        double? latitude = null;
+        double? longitude = null;
+        double? altitude = null;
 
         if (pduType == DisPduType.EntityState &&
             buffer.Length >= EntityStatePdu.MinimumWireLength)
@@ -348,6 +365,24 @@ public sealed class BowireDisProtocol : IBowireProtocol
                 marking = pdu.Marking.Marking?.Trim();
                 force = pdu.Force.ToString();
                 entityType = FormatEntityType(pdu.EntityType);
+
+                // §5.3.32 carries the position in the geocentric (ECEF)
+                // frame. Every consumer that wants to SHOW it — the map
+                // widget above all — needs degrees, and until this
+                // conversion landed the envelope simply had no position
+                // in it: a DIS stream reached the workbench carrying a
+                // location in every single PDU with no way to plot it.
+                //
+                // Null when the vector is not a position (all-zero, or
+                // non-finite). Emitting 0/0 there would put an entity
+                // off the coast of Africa and it would look like data.
+                var geodetic = GeocentricCoordinate.ToWgs84(pdu.Location);
+                if (geodetic is { } fix)
+                {
+                    latitude = fix.Latitude;
+                    longitude = fix.Longitude;
+                    altitude = fix.Altitude;
+                }
             }
         }
         else if (filter is not null)
@@ -369,6 +404,9 @@ public sealed class BowireDisProtocol : IBowireProtocol
             marking,
             force,
             entityType,
+            latitude,
+            longitude,
+            altitude,
             bytes = buffer.Length,
             raw = Convert.ToBase64String(buffer),
         };
