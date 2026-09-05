@@ -1,7 +1,7 @@
 {
   "id": "rec_dis_convoy",
   "name": "dis convoy sample",
-  "description": "Three Entity State PDUs broadcast on 239.1.2.3:3000, stepping an M1 tank ~100m/update.",
+  "description": "Three Entity State PDUs broadcast on 239.1.2.3:3000, stepping an M1 tank ~100m/update eastward near Hamburg at 12 m altitude. The minimal DIS sample: one entity, one track. See exercise.bowire-recording.json for the multi-entity version.",
   "createdAt": 1776945600000,
   "recordingFormatVersion": 2,
   "steps": [
@@ -13,7 +13,7 @@
       "method": "Send",
       "methodType": "Unary",
       "status": "OK",
-      "responseBinary": "BgEBAQAAAAAAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAAAAAAAAAAAAAAAAAQUy5hAAAAABBJCwQAAAAAEFTfEgAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA",
+      "responseBinary": "BgEBAQAAAAAAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAv/RYG0EtVFwl5q2sQUyIgY9tiYtBJBydDvHVR0FTe4b92hPzP8kP2wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA",
       "metadata": {
         "multicast-group": "239.1.2.3",
         "port": "3000",
@@ -22,23 +22,33 @@
     },
     {
       "id": "pdu_01",
-      "capturedAt": 100,
+      "capturedAt": 1000,
       "protocol": "dis",
       "service": "EntityState",
       "method": "Send",
       "methodType": "Unary",
       "status": "OK",
-      "responseBinary": "BgEBAQAAAAAAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAAAAAAAAAAAAAAAAAQUy5tgAAAABBJCx0AAAAAEFTfEgAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA"
+      "responseBinary": "BgEBAQAAA+gAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAv/RhfEEtVCcl5q2sQUyIeNq7ym9BJB1irE0NfUFTe4b9z7m1P8kP2wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA",
+      "metadata": {
+        "multicast-group": "239.1.2.3",
+        "port": "3000",
+        "ttl": "1"
+      }
     },
     {
       "id": "pdu_02",
-      "capturedAt": 200,
+      "capturedAt": 2000,
       "protocol": "dis",
       "service": "EntityState",
       "method": "Send",
       "methodType": "Unary",
       "status": "OK",
-      "responseBinary": "BgEBAQAAAAAAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAAAAAAAAAAAAAAAAAQUy56AAAAABBJCzYAAAAAEFTfEgAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA"
+      "responseBinary": "BgEBAQAAB9AAkAAAAAEAAQPoAQABAQDhAQEAAAEBAOEBAQAAv/Rq3UEtU/Il5q2sQUyIcCXruIJBJB4oSZLlMEFTe4b9sKr9P8kP2wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQk9XTElORTAxAAAAAAAA",
+      "metadata": {
+        "multicast-group": "239.1.2.3",
+        "port": "3000",
+        "ttl": "1"
+      }
     }
   ]
 }
