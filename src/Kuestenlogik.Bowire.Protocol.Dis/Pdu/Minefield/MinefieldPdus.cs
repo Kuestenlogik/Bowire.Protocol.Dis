@@ -213,11 +213,19 @@ public sealed record MinefieldQueryPdu(
 /// </summary>
 /// <remarks>
 /// <para>
-/// The body contains, in order: mine locations (always present), a
-/// variable block of DataFilter-gated optional arrays (ground burial
-/// depths, orientations, emplacement times, fusing, paint schemes,
-/// etc. — the spec lists 12 possible arrays each gated by a single
-/// DataFilter bit), then sensor types (always present).
+/// The body contains, in order: sensor types (always present, then
+/// padded to the next 32-bit boundary of the PDU), mine locations (always
+/// present), then a variable block of per-mine arrays — ground burial
+/// depths, orientations, emplacement times, mine entity numbers,
+/// fusing, paint schemes and more, most of them gated by a DataFilter
+/// bit.
+/// </para>
+/// <para>
+/// The plugin used to read the sensor types from the end of the PDU
+/// instead. That round-tripped with itself and with nothing else: any
+/// Data PDU with a sensor type from another implementation decoded
+/// wrong mine locations. The order here is the one both KDIS and
+/// open-dis (generated from the SISO XML) use.
 /// </para>
 /// <para>
 /// <see cref="MineLocations"/> and <see cref="SensorTypes"/> are typed;
@@ -244,12 +252,23 @@ public sealed record MinefieldDataPdu(
     /// <summary>Fixed wire length before the mine-locations list starts.</summary>
     public const int MinimumWireLength = 42;
 
-    /// <summary>Total wire length including mine locations, sensor types, and opaque optional fields.</summary>
+    /// <summary>Total wire length including sensor types, their padding, mine locations, and opaque optional fields.</summary>
     public int WireLength =>
         MinimumWireLength
+        + SensorTypesWireLength(SensorTypes.Count)
         + (MineLocations.Count * Vector3Float.WireLength)
-        + OptionalFieldsBlob.Length
-        + (SensorTypes.Count * sizeof(ushort));
+        + OptionalFieldsBlob.Length;
+
+    /// <summary>
+    /// Sensor types are 16 bits each; the mine locations after them start on
+    /// a 32-bit boundary of the PDU. The fixed part is 42 bytes, so that is
+    /// two bytes of padding after an even count and none after an odd one.
+    /// </summary>
+    private static int SensorTypesWireLength(int count)
+    {
+        var end = MinimumWireLength + (count * sizeof(ushort));
+        return (count * sizeof(ushort)) + ((4 - (end % 4)) % 4);
+    }
 
     /// <summary>Serialise into <paramref name="destination"/>.</summary>
     public int Marshal(Span<byte> destination)
@@ -274,9 +293,11 @@ public sealed record MinefieldDataPdu(
         w.WriteByte(0); // padding
         w.WriteUInt32(DataFilter);
         MineType.Marshal(ref w);
+        foreach (var sensor in SensorTypes) w.WriteUInt16(sensor);
+        for (var i = SensorTypes.Count * sizeof(ushort); i < SensorTypesWireLength(SensorTypes.Count); i++)
+            w.WriteByte(0); // padding to 32 bits
         foreach (var loc in MineLocations) loc.Marshal(ref w);
         w.WriteBytes(OptionalFieldsBlob);
-        foreach (var sensor in SensorTypes) w.WriteUInt16(sensor);
         return w.Offset;
     }
 
@@ -305,21 +326,17 @@ public sealed record MinefieldDataPdu(
         var dataFilter = r.ReadUInt32();
         var mineType = EntityType.Unmarshal(ref r);
 
+        var sensors = new List<ushort>(numSensors);
+        for (var i = 0; i < numSensors; i++) sensors.Add(r.ReadUInt16());
+        r.SkipPadding(SensorTypesWireLength(numSensors) - (numSensors * sizeof(ushort)));
+
         var mineLocations = new List<Vector3Float>(numMines);
         for (var i = 0; i < numMines; i++) mineLocations.Add(Vector3Float.Unmarshal(ref r));
 
-        // Remaining body after mine locations = optional-fields blob
-        // + sensor-types tail. We know exactly how many sensor-type
-        // bytes trail (2 bytes each) so the optional-fields blob is
-        // everything between.
-        var totalBody = Math.Max(0, header.Length - MinimumWireLength);
-        var mineLocBytes = numMines * Vector3Float.WireLength;
-        var sensorBytes = numSensors * sizeof(ushort);
-        var optionalBytes = Math.Max(0, totalBody - mineLocBytes - sensorBytes);
+        // Everything after the mine locations is the per-mine block.
+        var fixedBytes = MinimumWireLength + SensorTypesWireLength(numSensors) + (numMines * Vector3Float.WireLength);
+        var optionalBytes = Math.Max(0, header.Length - fixedBytes);
         var optional = optionalBytes > 0 ? r.ReadBytes(optionalBytes).ToArray() : [];
-
-        var sensors = new List<ushort>(numSensors);
-        for (var i = 0; i < numSensors; i++) sensors.Add(r.ReadUInt16());
 
         return new MinefieldDataPdu(
             header, minefieldId, simId, seqNumber, requestId, pduSeq,

@@ -114,6 +114,63 @@ public sealed class MinefieldTests
     }
 
     [Fact]
+    public void MinefieldData_Sensor_Types_Come_Before_The_Mine_Locations()
+    {
+        // A round trip cannot show this: it read its own order back. Until
+        // the fix the sensor types went to the end, and a Data PDU from any
+        // other implementation decoded its sensor types as a mine location.
+        // KDIS and open-dis both put them right after the mine type.
+        var pdu = new MinefieldDataPdu(
+            HeaderFor(DisPduType.MinefieldData, 0),
+            MinefieldId: new EntityId(1, 1, 5000),
+            RequestingSimulationId: new SimulationAddress(1, 1),
+            MinefieldSequenceNumber: 1, RequestId: 1, PduSequenceNumber: 1, NumberOfPdus: 1,
+            DataFilter: 0,
+            MineType: new EntityType(8, 1, 225, 1, 1, 0, 0),
+            MineLocations: [new Vector3Float(1f, 2f, 3f)],
+            SensorTypes: [0x0102],
+            OptionalFieldsBlob: []);
+
+        var bytes = pdu.Marshal();
+        var fixedEnd = MinefieldDataPdu.MinimumWireLength;
+        Assert.Equal(0x01, bytes[fixedEnd]);
+        Assert.Equal(0x02, bytes[fixedEnd + 1]);
+        // 42 + 2 is on a 32-bit boundary: the mine location follows directly.
+        Assert.Equal(1f, System.Buffers.Binary.BinaryPrimitives.ReadSingleBigEndian(bytes.AsSpan(fixedEnd + 2)));
+        Assert.Equal(fixedEnd + 2 + 12, bytes.Length);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void MinefieldData_Mine_Locations_Start_On_A_32_Bit_Boundary(int sensorCount)
+    {
+        var sensors = Enumerable.Range(1, sensorCount).Select(i => (ushort)i).ToArray();
+        var pdu = new MinefieldDataPdu(
+            HeaderFor(DisPduType.MinefieldData, 0),
+            MinefieldId: new EntityId(1, 1, 5000),
+            RequestingSimulationId: new SimulationAddress(1, 1),
+            MinefieldSequenceNumber: 1, RequestId: 1, PduSequenceNumber: 1, NumberOfPdus: 1,
+            DataFilter: 0,
+            MineType: new EntityType(8, 1, 225, 1, 1, 0, 0),
+            MineLocations: [new Vector3Float(7f, 8f, 9f)],
+            SensorTypes: sensors,
+            OptionalFieldsBlob: [0xAA, 0xBB, 0xCC, 0xDD]);
+
+        var bytes = pdu.Marshal();
+        var locationAt = bytes.Length - 4 - 12;
+        Assert.Equal(0, locationAt % 4);
+        Assert.Equal(7f, System.Buffers.Binary.BinaryPrimitives.ReadSingleBigEndian(bytes.AsSpan(locationAt)));
+
+        var decoded = MinefieldDataPdu.Unmarshal(bytes);
+        Assert.Equal(sensors, decoded.SensorTypes);
+        Assert.Equal([new Vector3Float(7f, 8f, 9f)], decoded.MineLocations);
+        Assert.Equal([0xAA, 0xBB, 0xCC, 0xDD], decoded.OptionalFieldsBlob);
+    }
+
+    [Fact]
     public void MinefieldResponseNack_RoundTrip_PreservesMissingList()
     {
         var missing = new byte[] { 5, 7, 9 };
