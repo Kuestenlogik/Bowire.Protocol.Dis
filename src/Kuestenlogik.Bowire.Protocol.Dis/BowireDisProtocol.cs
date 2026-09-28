@@ -265,7 +265,9 @@ public sealed class BowireDisProtocol : IBowireProtocol
             new BowireFieldInfo("length", 5, "int32", "LABEL_OPTIONAL", false, false, null, null),
             new BowireFieldInfo("entityId", 6, "string", "LABEL_OPTIONAL", false, false, null, null)
             {
-                Description = "site:app:entity triple for Entity State PDUs; null otherwise.",
+                Description = "site:app:entity triple. For Entity State the entity itself; for any "
+                    + "other PDU the first entity it names — the firing, issuing or originating side. "
+                    + "Null for a PDU that names no entity.",
             },
             new BowireFieldInfo("marking", 7, "string", "LABEL_OPTIONAL", false, false, null, null),
             new BowireFieldInfo("force", 8, "string", "LABEL_OPTIONAL", false, false, null, null),
@@ -283,6 +285,19 @@ public sealed class BowireDisProtocol : IBowireProtocol
             new BowireFieldInfo("altitude", 12, "double", "LABEL_OPTIONAL", false, false, null, null)
             {
                 Description = "Height above the WGS84 ellipsoid, in metres.",
+            },
+            new BowireFieldInfo("relatedEntityIds", 15, "string", "LABEL_REPEATED", false, true, null, null)
+            {
+                Description = "Every entity a non-EntityState PDU names, in the standard's field order "
+                    + "(a Fire: firing, target, munition). An entity-scoped stream shows a PDU when its "
+                    + "entity is in this list.",
+            },
+            new BowireFieldInfo("pdu", 16, "message", "LABEL_OPTIONAL", false, false,
+                new BowireMessageInfo("DisTypedPdu", "dis.TypedPdu", []), null)
+            {
+                Description = "The typed fields of a non-EntityState PDU, decoded by its IEEE 1278.1 "
+                    + "record; the shape depends on pduType. Null when it did not decode — raw is "
+                    + "always there.",
             },
             new BowireFieldInfo("bytes", 13, "int32", "LABEL_OPTIONAL", false, false, null, null),
             new BowireFieldInfo("raw", 14, "string", "LABEL_OPTIONAL", false, false, null, null)
@@ -349,6 +364,8 @@ public sealed class BowireDisProtocol : IBowireProtocol
         double? latitude = null;
         double? longitude = null;
         double? altitude = null;
+        string[]? relatedEntityIds = null;
+        JsonElement? typed = null;
 
         if (pduType == DisPduType.EntityState &&
             buffer.Length >= EntityStatePdu.MinimumWireLength)
@@ -385,12 +402,34 @@ public sealed class BowireDisProtocol : IBowireProtocol
                 }
             }
         }
-        else if (filter is not null)
+        else
         {
-            // Non-EntityState PDU on an entity-filtered stream: we
-            // don't attempt to route every PDU type by id here, so
-            // drop it rather than show unrelated traffic.
-            return null;
+            // #22 / #23 — every other PDU through its typed record. Until this
+            // it reached the workbench as a header and a base64 blob, and on an
+            // entity-scoped subscription it was dropped outright: a Fire from
+            // the filtered tank never showed in that tank's feed, because
+            // nothing could tell which entity the Fire was about.
+            var decoded = DisPduDecoder.TryDecode(buffer);
+            var related = decoded is null ? [] : DisPduDecoder.RelatedEntities(decoded);
+
+            // On an entity stream a PDU belongs if it names the entity in any
+            // role — the firing side of a Fire, the target of a Detonation,
+            // either party of a Collision, the designated entity of a
+            // Designator. A PDU that names no entity (a Live Entity PDU, whose
+            // ids are the narrower LiveEntityId, or one that did not decode)
+            // stays off an entity stream as before.
+            if (filter is not null && !related.Contains(filter.Value))
+                return null;
+
+            if (related.Count > 0)
+            {
+                // The first entity the PDU names is the one it is "from" —
+                // firing, issuing, originating, requesting — by the field order
+                // of the standard itself.
+                entityIdString = FormatEntityId(related[0]);
+                relatedEntityIds = [.. related.Select(FormatEntityId)];
+            }
+            typed = TypedFields(decoded);
         }
 
         var envelope = new
@@ -407,10 +446,39 @@ public sealed class BowireDisProtocol : IBowireProtocol
             latitude,
             longitude,
             altitude,
+            relatedEntityIds,
+            pdu = typed,
             bytes = buffer.Length,
             raw = Convert.ToBase64String(buffer),
         };
 
         return JsonSerializer.Serialize(envelope);
+    }
+
+    private static readonly JsonSerializerOptions TypedFieldOptions = new(JsonSerializerDefaults.Web)
+    {
+        // A float field on a live exercise network can be NaN or infinite;
+        // the default throws on those, and one odd velocity must not cost the
+        // whole PDU its typed view.
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
+
+    /// <summary>
+    /// The decoded record as JSON (#22), or null when there is none or it does
+    /// not serialise. The envelope keeps <c>raw</c> either way, so nothing is
+    /// lost when the typed view is.
+    /// </summary>
+    private static JsonElement? TypedFields(object? decoded)
+    {
+        if (decoded is null) return null;
+        try
+        {
+            return JsonSerializer.SerializeToElement(decoded, decoded.GetType(), TypedFieldOptions);
+        }
+        catch (Exception ex) when (ex is NotSupportedException or InvalidOperationException or ArgumentException)
+        {
+            return null;
+        }
     }
 }

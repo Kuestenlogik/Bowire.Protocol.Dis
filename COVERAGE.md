@@ -255,7 +255,7 @@ The plugin exposes the DIS exercise to the Bowire workbench through the standard
 |------------|--------|-------|
 | `DiscoverAsync` — parse `dis://group:port` URLs | ✅ | Falls back to `239.1.2.3:3000`. Bare `host:port` accepted. |
 | `DiscoverAsync` — multicast probe for live entities | ✅ | Short listen on the group; every Entity State PDU's `EntityId` + marking becomes its own service. |
-| `InvokeStreamAsync` — exercise-wide PDU feed | ✅ | Yields a JSON envelope per PDU (pdu type, exercise id, length, base64 raw bytes). |
+| `InvokeStreamAsync` — exercise-wide PDU feed | ✅ | Yields a JSON envelope per PDU (pdu type, exercise id, length, base64 raw bytes); every non-EntityState PDU also carries its typed fields (`pdu`) and the entities it names (`relatedEntityIds`) — #22. An entity stream shows every PDU naming that entity in any role — #23. |
 | `InvokeStreamAsync` — entity-filtered feed | ✅ | Service names carry the `site:app:entity` triple so the stream filters to that entity's PDUs. |
 | `InvokeAsync` (unary) | n/a | DIS is broadcast-only — surfaces a clear error pointing to the monitor stream. |
 | `OpenChannelAsync` (duplex) | n/a | No request/reply semantics to bind to. |

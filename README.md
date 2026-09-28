@@ -65,14 +65,22 @@ window, observes every EntityState PDU it sees, and surfaces:
   every PDU on the group (raw exercise feed)
 - one service per discovered entity, named after its `EntityId`
   (`<site>:<application>:<entity>`) plus marking + entity-type info,
-  whose `monitor` stream yields only PDUs from that entity
+  whose `monitor` stream yields every PDU that names that entity
 
 Subscribing to a service opens a UDP socket on the same group and
 yields one JSON envelope per matched PDU. The envelope decodes the
 PDU header (kind, family, exercise id, timestamp) plus EntityState
 specifics (position, orientation, velocity, marking string, force id)
-when applicable; other PDU kinds surface header + raw bytes so they
-can still be hex-dumped in the workbench.
+when applicable. Every other PDU kind is decoded by its IEEE 1278.1
+record into a `pdu` object with its typed fields, and lists the
+entities it names in `relatedEntityIds`; `raw` carries the bytes either
+way, so anything can still be hex-dumped.
+
+An entity's stream shows every PDU that names that entity in any role —
+its own Entity State, a Fire it fired or was targeted by, a Collision
+on either side, a Designator aimed at it. Live Entity PDUs identify
+entities with the narrower Live Entity id and do not reach an entity
+stream yet.
 
 ## Mock replay
 
