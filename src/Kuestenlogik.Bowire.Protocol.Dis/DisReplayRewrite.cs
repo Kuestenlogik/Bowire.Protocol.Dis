@@ -137,7 +137,11 @@ internal sealed record DisReplayRewrite(
         {
             var decoded = DisPduDecoder.TryDecode(pdu);
             if (decoded is null) return null;
-            if (!DisPduDecoder.RelatedEntities(decoded).Any(Entities.Contains)) return null;
+            try
+            {
+                if (!DisPduDecoder.RelatedEntities(decoded).Any(Entities.Contains)) return null;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { return null; }
         }
 
         if (ExerciseId is null && !Retime) return pdu;

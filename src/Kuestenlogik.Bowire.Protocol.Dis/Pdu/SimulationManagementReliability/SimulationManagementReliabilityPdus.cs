@@ -399,9 +399,9 @@ public sealed record ActionRequestRPdu(
     internal static (List<FixedDatum> Fixed, List<VariableDatum> Variable)
         ReadDatums(ref DisWireReader r, uint fixedCount, uint variableCount)
     {
-        var fd = new List<FixedDatum>((int)fixedCount);
+        var fd = new List<FixedDatum>(r.CheckCount(fixedCount));
         for (var i = 0; i < fixedCount; i++) fd.Add(FixedDatum.Unmarshal(ref r));
-        var vd = new List<VariableDatum>((int)variableCount);
+        var vd = new List<VariableDatum>(r.CheckCount(variableCount));
         for (var i = 0; i < variableCount; i++) vd.Add(VariableDatum.Unmarshal(ref r));
         return (fd, vd);
     }
@@ -530,9 +530,9 @@ public sealed record DataQueryRPdu(
         var timeInterval = r.ReadUInt32();
         var fixedCount = r.ReadUInt32();
         var variableCount = r.ReadUInt32();
-        var fixedIds = new List<uint>((int)fixedCount);
+        var fixedIds = new List<uint>(r.CheckCount(fixedCount));
         for (var i = 0; i < fixedCount; i++) fixedIds.Add(r.ReadUInt32());
-        var variableIds = new List<uint>((int)variableCount);
+        var variableIds = new List<uint>(r.CheckCount(variableCount));
         for (var i = 0; i < variableCount; i++) variableIds.Add(r.ReadUInt32());
         return new DataQueryRPdu(header, originating, receiving, reliability, requestId, timeInterval, fixedIds, variableIds);
     }
@@ -836,7 +836,7 @@ public sealed record RecordRPdu(
         r.SkipPadding(2);
         var serial = r.ReadUInt32();
         var recordSetCount = r.ReadUInt32();
-        var recordSets = new List<RecordSet>((int)recordSetCount);
+        var recordSets = new List<RecordSet>(r.CheckCount(recordSetCount));
         for (var i = 0; i < recordSetCount; i++) recordSets.Add(RecordSet.Unmarshal(ref r));
         return new RecordRPdu(header, originating, receiving, requestId, reliability, eventType, serial, recordSets);
     }
@@ -898,7 +898,7 @@ public sealed record SetRecordRPdu(
         var (header, originating, receiving, reliability) = SimManRCodec.ReadPrefix(ref r);
         var requestId = r.ReadUInt32();
         var recordSetCount = r.ReadUInt32();
-        var recordSets = new List<RecordSet>((int)recordSetCount);
+        var recordSets = new List<RecordSet>(r.CheckCount(recordSetCount));
         for (var i = 0; i < recordSetCount; i++) recordSets.Add(RecordSet.Unmarshal(ref r));
         return new SetRecordRPdu(header, originating, receiving, requestId, reliability, recordSets);
     }
@@ -959,7 +959,7 @@ public sealed record RecordQueryRPdu(
         r.SkipPadding(2);
         var timeInterval = r.ReadUInt32();
         var recordCount = r.ReadUInt32();
-        var recordIds = new List<uint>((int)recordCount);
+        var recordIds = new List<uint>(r.CheckCount(recordCount));
         for (var i = 0; i < recordCount; i++) recordIds.Add(r.ReadUInt32());
         return new RecordQueryRPdu(header, originating, receiving, requestId, reliability, eventType, timeInterval, recordIds);
     }

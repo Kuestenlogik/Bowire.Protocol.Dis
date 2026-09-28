@@ -132,7 +132,7 @@ public static class MinefieldMineFields
             if (rest.Length >= 4 || rest.IndexOfAnyExcept((byte)0) >= 0) return null;
             return mines;
         }
-        catch (Exception ex) when (ex is IndexOutOfRangeException or ArgumentOutOfRangeException)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return null;
         }

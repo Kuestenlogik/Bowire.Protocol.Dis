@@ -50,9 +50,9 @@ internal static class SimManCodec
     internal static (List<FixedDatum> Fixed, List<VariableDatum> Variable)
         ReadDatums(ref DisWireReader r, uint fixedCount, uint variableCount)
     {
-        var fixedDatums = new List<FixedDatum>((int)fixedCount);
+        var fixedDatums = new List<FixedDatum>(r.CheckCount(fixedCount));
         for (var i = 0; i < fixedCount; i++) fixedDatums.Add(FixedDatum.Unmarshal(ref r));
-        var variableDatums = new List<VariableDatum>((int)variableCount);
+        var variableDatums = new List<VariableDatum>(r.CheckCount(variableCount));
         for (var i = 0; i < variableCount; i++) variableDatums.Add(VariableDatum.Unmarshal(ref r));
         return (fixedDatums, variableDatums);
     }
@@ -498,9 +498,9 @@ public sealed record DataQueryPdu(
         var timeInterval = r.ReadUInt32();
         var fixedCount = r.ReadUInt32();
         var variableCount = r.ReadUInt32();
-        var fixedIds = new List<uint>((int)fixedCount);
+        var fixedIds = new List<uint>(r.CheckCount(fixedCount));
         for (var i = 0; i < fixedCount; i++) fixedIds.Add(r.ReadUInt32());
-        var variableIds = new List<uint>((int)variableCount);
+        var variableIds = new List<uint>(r.CheckCount(variableCount));
         for (var i = 0; i < variableCount; i++) variableIds.Add(r.ReadUInt32());
         return new DataQueryPdu(header, originating, receiving, requestId, timeInterval, fixedIds, variableIds);
     }

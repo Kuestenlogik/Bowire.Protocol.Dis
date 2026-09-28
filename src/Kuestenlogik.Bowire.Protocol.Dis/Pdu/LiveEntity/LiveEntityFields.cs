@@ -141,7 +141,7 @@ public static class LiveEntityFields
             var value = read(ref r);
             return r.Remaining == 0 ? value : null;
         }
-        catch (Exception ex) when (ex is IndexOutOfRangeException or ArgumentOutOfRangeException or InvalidDataException)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return null;
         }

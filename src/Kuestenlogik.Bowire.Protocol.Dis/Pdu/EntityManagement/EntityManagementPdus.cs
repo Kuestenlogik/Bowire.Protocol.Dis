@@ -171,7 +171,7 @@ public sealed record AggregateStatePdu(
         for (var i = 0; i < numSilentEntities; i++) silentEntities.Add(EntityType.Unmarshal(ref r));
 
         var numDatums = r.ReadUInt32();
-        var datums = new List<VariableDatum>((int)numDatums);
+        var datums = new List<VariableDatum>(r.CheckCount(numDatums));
         for (var i = 0; i < numDatums; i++) datums.Add(VariableDatum.Unmarshal(ref r));
 
         return new AggregateStatePdu(

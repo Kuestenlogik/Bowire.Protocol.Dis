@@ -479,7 +479,7 @@ public sealed record IntercomControlPdu(
         var masterDeviceId = r.ReadUInt16();
         var masterChannelId = r.ReadUInt32();
         var paramLength = r.ReadUInt32();
-        var parameters = paramLength > 0 ? r.ReadBytes((int)paramLength).ToArray() : [];
+        var parameters = paramLength > 0 ? r.ReadBytes(r.CheckCount(paramLength)).ToArray() : [];
         return new IntercomControlPdu(
             header, controlType, channelType, sourceEntityId, sourceDeviceId,
             sourceLineId, transmitPriority, transmitLineState, command,

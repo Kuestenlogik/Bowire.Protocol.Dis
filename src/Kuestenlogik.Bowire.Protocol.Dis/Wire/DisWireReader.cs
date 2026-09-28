@@ -110,6 +110,18 @@ public ref struct DisWireReader
         return slice;
     }
 
+    /// <summary>
+    /// A 32-bit element count read off the wire, as a capacity it is safe to
+    /// allocate. Every element takes at least one byte, so a count larger
+    /// than what is left of the buffer cannot be real — a malformed or
+    /// hostile PDU, which throws <see cref="InvalidDataException"/> here
+    /// instead of reserving gigabytes first.
+    /// </summary>
+    public readonly int CheckCount(uint count) =>
+        count <= (uint)Math.Max(0, Remaining)
+            ? (int)count
+            : throw new InvalidDataException($"A count of {count} does not fit the {Remaining} bytes left.");
+
     /// <summary>Skip <paramref name="count"/> bytes without reading them.</summary>
     public void SkipPadding(int count) { _offset += count; }
 

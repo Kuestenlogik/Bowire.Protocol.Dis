@@ -170,7 +170,11 @@ public sealed class BowireDisProtocol : IBowireProtocol
                 catch (OperationCanceledException) { yield break; }
                 catch (SocketException) { yield break; }
 
-                var envelope = TryBuildEnvelope(result.Buffer, filter);
+                // One PDU that cannot be turned into an envelope is skipped;
+                // it must not end the subscription for every PDU after it.
+                string? envelope;
+                try { envelope = TryBuildEnvelope(result.Buffer, filter); }
+                catch (Exception ex) when (ex is not OutOfMemoryException) { envelope = null; }
                 if (envelope is not null) yield return envelope;
             }
         }
@@ -410,7 +414,9 @@ public sealed class BowireDisProtocol : IBowireProtocol
             // the filtered tank never showed in that tank's feed, because
             // nothing could tell which entity the Fire was about.
             var decoded = DisPduDecoder.TryDecode(buffer);
-            var related = decoded is null ? [] : DisPduDecoder.RelatedEntities(decoded);
+            IReadOnlyList<EntityId> related;
+            try { related = decoded is null ? [] : DisPduDecoder.RelatedEntities(decoded); }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { related = []; decoded = null; }
 
             // On an entity stream a PDU belongs if it names the entity in any
             // role — the firing side of a Fire, the target of a Detonation,
@@ -476,7 +482,9 @@ public sealed class BowireDisProtocol : IBowireProtocol
         {
             return JsonSerializer.SerializeToElement(decoded, decoded.GetType(), TypedFieldOptions);
         }
-        catch (Exception ex) when (ex is NotSupportedException or InvalidOperationException or ArgumentException)
+        // A getter that throws surfaces here wrapped; either way the
+        // envelope keeps raw and goes out without a typed view.
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return null;
         }

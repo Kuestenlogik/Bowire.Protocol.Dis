@@ -116,8 +116,12 @@ internal static class DisPduDecoder
         if (buffer.Length < PduHeader.WireLength) return null;
         if (!Decoders.TryGetValue((DisPduType)buffer[2], out var decode)) return null;
         try { return decode(buffer); }
-        catch (Exception ex) when (ex is ArgumentException or IndexOutOfRangeException
-            or InvalidOperationException or FormatException or OverflowException)
+        // Whatever a decoder throws on bytes it was not written for — a
+        // custom PDU reusing an id, a truncated one, a hostile one — means
+        // "no typed record", never "no stream". The decoders read counts
+        // through DisWireReader.CheckCount, so no count reserves memory the
+        // buffer could not hold.
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return null;
         }
@@ -138,7 +142,11 @@ internal static class DisPduDecoder
         foreach (var property in pdu.GetType().GetProperties())
         {
             if (property.GetIndexParameters().Length > 0) continue;
-            var value = property.GetValue(pdu);
+            object? value;
+            // A computed view (a record's typed Fields, say) that fails is
+            // one property less to look at, not a failed PDU.
+            try { value = property.GetValue(pdu); }
+            catch (System.Reflection.TargetInvocationException) { continue; }
             switch (value)
             {
                 case EntityId id:
