@@ -270,11 +270,11 @@ public sealed record MinefieldQueryPdu(
 /// open-dis (generated from the SISO XML) use.
 /// </para>
 /// <para>
-/// <see cref="MineLocations"/> and <see cref="SensorTypes"/> are typed;
-/// the DataFilter-gated middle section is kept as a
-/// <see cref="OptionalFieldsBlob"/> byte array and round-trips
-/// verbatim. Typed decoders for the optional arrays would need the
-/// exact DataFilter bit-to-array mapping from SISO test vectors.
+/// <see cref="MineLocations"/> and <see cref="SensorTypes"/> are typed.
+/// The per-mine block is kept as <see cref="OptionalFieldsBlob"/> and
+/// round-trips verbatim; <see cref="Mines"/> reads it as typed records
+/// where it can (see <see cref="MinefieldMineFields"/> for the source of
+/// that layout and when it declines).
 /// </para>
 /// </remarks>
 public sealed record MinefieldDataPdu(
@@ -293,6 +293,15 @@ public sealed record MinefieldDataPdu(
 {
     /// <summary>Fixed wire length before the sensor types start (IEEE 1278.1-2012 layout).</summary>
     public const int MinimumWireLength = 42;
+
+    /// <summary>
+    /// The per-mine fields of <see cref="OptionalFieldsBlob"/> as typed
+    /// records, one per mine location — or null when the bytes do not read
+    /// cleanly under <see cref="DataFilter"/> (#25). The blob stays what is
+    /// written back, so a PDU round-trips byte for byte either way.
+    /// </summary>
+    public IReadOnlyList<MinefieldMine>? Mines =>
+        MinefieldMineFields.TryDecode(OptionalFieldsBlob, DataFilter, MineLocations.Count, SensorTypes.Count);
 
     /// <summary>
     /// Entity number of the requesting entity. Only a pre-2012 (V6) PDU carries

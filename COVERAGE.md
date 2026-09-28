@@ -150,7 +150,7 @@ Type ids per IEEE 1278.1-2012 §5.3 Table 5. "Ver." = version the PDU first appe
 |----|------|------|--------|-------|
 | 37 | Minefield State | V6 | ✅ | Full typed roundtrip incl. `Vector2Float` perimeter points and `EntityType` mine types. |
 | 38 | Minefield Query | V6 | ✅ | Full typed roundtrip incl. perimeter points and sensor-type list. Requester is a 6-byte entity id in V6, a 4-byte simulation id from 2012 on (#58). |
-| 39 | Minefield Data | V6 | ✅ | Typed sensor types (padded to 32 bits) + mine locations, in that order — the plugin had them the other way round until #25, which only round-tripped with itself. The per-mine arrays after the locations stay an `OptionalFieldsBlob`: their DataFilter bit assignment has one open source (KDIS) and no SISO test vector. |
+| 39 | Minefield Data | V6 | ✅ | Typed sensor types (padded to 32 bits) + mine locations, in that order (#25). Per-mine fields typed as `Mines` via `MinefieldMineFields` — layout and DataFilter bits after KDIS, the only open implementation that honours the filter; no SISO test vector. `OptionalFieldsBlob` stays the source of truth and round-trips byte for byte; `Mines` is null when the bytes do not add up or the filter sets an unknown bit. |
 | 40 | Minefield Response NACK | V6 | ✅ | Missing-PDU list follows the count directly (no padding, #58); requester sized by version as for Query. |
 
 ### Family 9 — Synthetic Environment
