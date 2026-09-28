@@ -121,7 +121,7 @@ public sealed class MinefieldTests
         // other implementation decoded its sensor types as a mine location.
         // KDIS and open-dis both put them right after the mine type.
         var pdu = new MinefieldDataPdu(
-            HeaderFor(DisPduType.MinefieldData, 0),
+            PduHeader.ForV7(1, DisPduType.MinefieldData, DisProtocolFamily.Minefield, 0),
             MinefieldId: new EntityId(1, 1, 5000),
             RequestingSimulationId: new SimulationAddress(1, 1),
             MinefieldSequenceNumber: 1, RequestId: 1, PduSequenceNumber: 1, NumberOfPdus: 1,
@@ -141,15 +141,24 @@ public sealed class MinefieldTests
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    public void MinefieldData_Mine_Locations_Start_On_A_32_Bit_Boundary(int sensorCount)
+    [InlineData(6, 0)]
+    [InlineData(6, 1)]
+    [InlineData(6, 2)]
+    [InlineData(6, 3)]
+    [InlineData(7, 0)]
+    [InlineData(7, 1)]
+    [InlineData(7, 2)]
+    [InlineData(7, 3)]
+    public void MinefieldData_Mine_Locations_Start_On_A_32_Bit_Boundary(int version, int sensorCount)
     {
+        // V6 and V7 differ in the fixed part (44 vs 42 bytes, #58), so the
+        // padding after the sensor types differs too; the boundary does not.
         var sensors = Enumerable.Range(1, sensorCount).Select(i => (ushort)i).ToArray();
+        var header = version == 7
+            ? PduHeader.ForV7(1, DisPduType.MinefieldData, DisProtocolFamily.Minefield, 0)
+            : HeaderFor(DisPduType.MinefieldData, 0);
         var pdu = new MinefieldDataPdu(
-            HeaderFor(DisPduType.MinefieldData, 0),
+            header,
             MinefieldId: new EntityId(1, 1, 5000),
             RequestingSimulationId: new SimulationAddress(1, 1),
             MinefieldSequenceNumber: 1, RequestId: 1, PduSequenceNumber: 1, NumberOfPdus: 1,
@@ -183,7 +192,7 @@ public sealed class MinefieldTests
             MissingPduSequenceNumbers: missing);
 
         var bytes = original.Marshal();
-        Assert.Equal(MinefieldResponseNackPdu.MinimumWireLength + missing.Length, bytes.Length);
+        Assert.Equal(original.FixedWireLength + missing.Length, bytes.Length);
 
         var decoded = MinefieldResponseNackPdu.Unmarshal(bytes);
         Assert.Equal(3, decoded.RequestId);
@@ -192,13 +201,11 @@ public sealed class MinefieldTests
     }
 
     [Fact]
-    public void MinefieldResponseNack_AndCollisionElastic_SharePduTypeId_40_DisambiguatedByFamily()
+    public void MinefieldResponseNack_Writes_Type_40_In_The_Minefield_Family()
     {
-        // Both PDUs have id 40 but different family bytes. Verify the
-        // Minefield variant writes family 8 (Minefield), not family 1
-        // (Entity Information) that CollisionElastic uses.
+        // This test used to claim Collision-Elastic shared id 40; it is 66 (#57).
         var original = new MinefieldResponseNackPdu(
-            HeaderFor(DisPduType.MinefieldResponseNack, MinefieldResponseNackPdu.MinimumWireLength),
+            HeaderFor(DisPduType.MinefieldResponseNack, 0),
             MinefieldId: new EntityId(1, 1, 5000),
             RequestingSimulationId: new SimulationAddress(1, 1),
             RequestId: 0,
@@ -208,5 +215,61 @@ public sealed class MinefieldTests
         var bytes = original.Marshal();
         Assert.Equal(40, bytes[2]);                                        // PDU type
         Assert.Equal((byte)DisProtocolFamily.Minefield, bytes[3]);         // family disambiguator
+    }
+
+    // ---- #58: the requester field changed size in 2012 ----
+
+    private static MinefieldQueryPdu Query(PduHeader header) => new(
+        header,
+        MinefieldId: new EntityId(1, 1, 5000),
+        RequestingSimulationId: new SimulationAddress(0x0A0B, 0x0C0D),
+        RequestId: 0x77,
+        DataFilter: 0,
+        RequestedMineType: new EntityType(8, 1, 225, 1, 1, 0, 0),
+        PerimeterPoints: [],
+        SensorTypes: [])
+    { RequestingEntity = 0x0E0F };
+
+    [Fact]
+    public void A_V6_Query_Carries_A_Six_Byte_Requesting_Entity()
+    {
+        // KDIS and open-dis dis6 read site, application, entity here.
+        var bytes = Query(HeaderFor(DisPduType.MinefieldQuery, 0)).Marshal();
+        Assert.Equal([0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F], bytes[18..24]);
+        Assert.Equal(0x77, bytes[24]);
+        Assert.Equal(40, bytes.Length);
+
+        var decoded = MinefieldQueryPdu.Unmarshal(bytes);
+        Assert.Equal(0x77, decoded.RequestId);
+        Assert.Equal(0x0E0F, decoded.RequestingEntity);
+    }
+
+    [Fact]
+    public void A_V7_Query_Carries_A_Four_Byte_Simulation_Id()
+    {
+        var bytes = Query(PduHeader.ForV7(1, DisPduType.MinefieldQuery, DisProtocolFamily.Minefield, 0)).Marshal();
+        Assert.Equal([0x0A, 0x0B, 0x0C, 0x0D], bytes[18..22]);
+        Assert.Equal(0x77, bytes[22]);
+        Assert.Equal(MinefieldQueryPdu.MinimumWireLength, bytes.Length);
+        // A 2012 requester is a simulation: there is no entity number to keep.
+        Assert.Equal(0, MinefieldQueryPdu.Unmarshal(bytes).RequestingEntity);
+    }
+
+    [Fact]
+    public void A_Nack_Lists_The_Missing_Sequence_Numbers_Right_After_Their_Count()
+    {
+        // The plugin had two padding bytes here that no other implementation has.
+        var nack = new MinefieldResponseNackPdu(
+            PduHeader.ForV7(1, DisPduType.MinefieldResponseNack, DisProtocolFamily.Minefield, 0),
+            MinefieldId: new EntityId(1, 1, 5000),
+            RequestingSimulationId: new SimulationAddress(1, 1),
+            RequestId: 3,
+            NumberOfMissingPdus: 2,
+            MissingPduSequenceNumbers: [5, 9]);
+
+        var bytes = nack.Marshal();
+        Assert.Equal(2, bytes[23]);
+        Assert.Equal([5, 9], bytes[24..26]);
+        Assert.Equal(26, bytes.Length);
     }
 }

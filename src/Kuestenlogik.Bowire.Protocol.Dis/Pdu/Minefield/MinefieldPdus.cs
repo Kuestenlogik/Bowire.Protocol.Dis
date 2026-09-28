@@ -7,6 +7,37 @@ using Kuestenlogik.Bowire.Protocol.Dis.Wire;
 
 namespace Kuestenlogik.Bowire.Protocol.Dis.Pdu.Minefield;
 
+/// <summary>
+/// The requesting-simulator field that Minefield Query, Data and Response
+/// NACK share, and that changed size between versions (#58).
+/// </summary>
+/// <remarks>
+/// Up to IEEE 1278.1a-1998 it is a Requesting Entity ID — site, application,
+/// entity, 6 bytes (KDIS and open-dis dis6 both read it so). IEEE
+/// 1278.1-2012 made it a Simulation Identifier — site, application, 4 bytes
+/// (open-dis dis7). The plugin read 4 bytes for every version, so a V6
+/// query was off by two bytes from there on.
+/// </remarks>
+internal static class MinefieldRequester
+{
+    /// <summary>Extra bytes a pre-2012 PDU carries for the entity number.</summary>
+    internal static int ExtraBytes(DisProtocolVersion version) =>
+        version >= DisProtocolVersion.Ieee1278_1_2012 ? 0 : sizeof(ushort);
+
+    internal static void Marshal(ref DisWireWriter w, DisProtocolVersion version, SimulationAddress simulation, ushort entity)
+    {
+        simulation.Marshal(ref w);
+        if (ExtraBytes(version) > 0) w.WriteUInt16(entity);
+    }
+
+    internal static (SimulationAddress Simulation, ushort Entity) Unmarshal(ref DisWireReader r, DisProtocolVersion version)
+    {
+        var simulation = SimulationAddress.Unmarshal(ref r);
+        var entity = ExtraBytes(version) > 0 ? r.ReadUInt16() : (ushort)0;
+        return (simulation, entity);
+    }
+}
+
 // --- PDU: Minefield State (37) -----------------------------------------------
 
 /// <summary>
@@ -138,12 +169,22 @@ public sealed record MinefieldQueryPdu(
     IReadOnlyList<Vector2Float> PerimeterPoints,
     IReadOnlyList<ushort> SensorTypes)
 {
-    /// <summary>Fixed wire length before the typed perimeter / sensor lists.</summary>
+    /// <summary>Fixed wire length before the typed perimeter / sensor lists (IEEE 1278.1-2012 layout).</summary>
     public const int MinimumWireLength = 38;
+
+    /// <summary>
+    /// Entity number of the requesting entity. Only a pre-2012 (V6) PDU carries
+    /// it — there the requester is an entity, site:application:entity; from
+    /// IEEE 1278.1-2012 on it is a simulation and this stays 0 (#58).
+    /// </summary>
+    public ushort RequestingEntity { get; init; }
+
+    /// <summary>Fixed wire length for this PDU's protocol version (<see cref="MinimumWireLength"/> is the 2012 one).</summary>
+    public int FixedWireLength => MinimumWireLength + MinefieldRequester.ExtraBytes(Header.ProtocolVersion);
 
     /// <summary>Total wire length including perimeter points and sensor types.</summary>
     public int WireLength =>
-        MinimumWireLength
+        FixedWireLength
         + (PerimeterPoints.Count * Vector2Float.WireLength)
         + (SensorTypes.Count * sizeof(ushort));
 
@@ -160,7 +201,7 @@ public sealed record MinefieldQueryPdu(
         header.Marshal(ref w);
 
         MinefieldId.Marshal(ref w);
-        RequestingSimulationId.Marshal(ref w);
+        MinefieldRequester.Marshal(ref w, Header.ProtocolVersion, RequestingSimulationId, RequestingEntity);
         w.WriteByte(RequestId);
         w.WriteByte((byte)PerimeterPoints.Count);
         w.WriteByte(0); // padding
@@ -186,7 +227,7 @@ public sealed record MinefieldQueryPdu(
         var r = new DisWireReader(source);
         var header = PduHeader.Unmarshal(ref r);
         var minefieldId = EntityId.Unmarshal(ref r);
-        var simId = SimulationAddress.Unmarshal(ref r);
+        var (simId, requestingEntity) = MinefieldRequester.Unmarshal(ref r, header.ProtocolVersion);
         var requestId = r.ReadByte();
         var numPerimeter = r.ReadByte();
         r.SkipPadding(1);
@@ -199,7 +240,8 @@ public sealed record MinefieldQueryPdu(
         for (var i = 0; i < numSensors; i++) sensors.Add(r.ReadUInt16());
         return new MinefieldQueryPdu(
             header, minefieldId, simId, requestId,
-            dataFilter, requestedMineType, perimeter, sensors);
+            dataFilter, requestedMineType, perimeter, sensors)
+        { RequestingEntity = requestingEntity };
     }
 }
 
@@ -249,24 +291,35 @@ public sealed record MinefieldDataPdu(
     IReadOnlyList<ushort> SensorTypes,
     byte[] OptionalFieldsBlob)
 {
-    /// <summary>Fixed wire length before the mine-locations list starts.</summary>
+    /// <summary>Fixed wire length before the sensor types start (IEEE 1278.1-2012 layout).</summary>
     public const int MinimumWireLength = 42;
+
+    /// <summary>
+    /// Entity number of the requesting entity. Only a pre-2012 (V6) PDU carries
+    /// it — there the requester is an entity, site:application:entity; from
+    /// IEEE 1278.1-2012 on it is a simulation and this stays 0 (#58).
+    /// </summary>
+    public ushort RequestingEntity { get; init; }
+
+    /// <summary>Fixed wire length for this PDU's protocol version (<see cref="MinimumWireLength"/> is the 2012 one).</summary>
+    public int FixedWireLength => MinimumWireLength + MinefieldRequester.ExtraBytes(Header.ProtocolVersion);
 
     /// <summary>Total wire length including sensor types, their padding, mine locations, and opaque optional fields.</summary>
     public int WireLength =>
-        MinimumWireLength
-        + SensorTypesWireLength(SensorTypes.Count)
+        FixedWireLength
+        + SensorTypesWireLength(FixedWireLength, SensorTypes.Count)
         + (MineLocations.Count * Vector3Float.WireLength)
         + OptionalFieldsBlob.Length;
 
     /// <summary>
     /// Sensor types are 16 bits each; the mine locations after them start on
-    /// a 32-bit boundary of the PDU. The fixed part is 42 bytes, so that is
-    /// two bytes of padding after an even count and none after an odd one.
+    /// a 32-bit boundary of the PDU. With the 2012 fixed part (42 bytes) that
+    /// is two bytes of padding after an even count, with the V6 one (44
+    /// bytes) after an odd count.
     /// </summary>
-    private static int SensorTypesWireLength(int count)
+    private static int SensorTypesWireLength(int fixedLength, int count)
     {
-        var end = MinimumWireLength + (count * sizeof(ushort));
+        var end = fixedLength + (count * sizeof(ushort));
         return (count * sizeof(ushort)) + ((4 - (end % 4)) % 4);
     }
 
@@ -283,7 +336,7 @@ public sealed record MinefieldDataPdu(
         header.Marshal(ref w);
 
         MinefieldId.Marshal(ref w);
-        RequestingSimulationId.Marshal(ref w);
+        MinefieldRequester.Marshal(ref w, Header.ProtocolVersion, RequestingSimulationId, RequestingEntity);
         w.WriteUInt16(MinefieldSequenceNumber);
         w.WriteByte(RequestId);
         w.WriteByte(PduSequenceNumber);
@@ -294,7 +347,7 @@ public sealed record MinefieldDataPdu(
         w.WriteUInt32(DataFilter);
         MineType.Marshal(ref w);
         foreach (var sensor in SensorTypes) w.WriteUInt16(sensor);
-        for (var i = SensorTypes.Count * sizeof(ushort); i < SensorTypesWireLength(SensorTypes.Count); i++)
+        for (var i = SensorTypes.Count * sizeof(ushort); i < SensorTypesWireLength(FixedWireLength, SensorTypes.Count); i++)
             w.WriteByte(0); // padding to 32 bits
         foreach (var loc in MineLocations) loc.Marshal(ref w);
         w.WriteBytes(OptionalFieldsBlob);
@@ -315,7 +368,7 @@ public sealed record MinefieldDataPdu(
         var r = new DisWireReader(source);
         var header = PduHeader.Unmarshal(ref r);
         var minefieldId = EntityId.Unmarshal(ref r);
-        var simId = SimulationAddress.Unmarshal(ref r);
+        var (simId, requestingEntity) = MinefieldRequester.Unmarshal(ref r, header.ProtocolVersion);
         var seqNumber = r.ReadUInt16();
         var requestId = r.ReadByte();
         var pduSeq = r.ReadByte();
@@ -328,19 +381,21 @@ public sealed record MinefieldDataPdu(
 
         var sensors = new List<ushort>(numSensors);
         for (var i = 0; i < numSensors; i++) sensors.Add(r.ReadUInt16());
-        r.SkipPadding(SensorTypesWireLength(numSensors) - (numSensors * sizeof(ushort)));
+        var fixedLength = MinimumWireLength + MinefieldRequester.ExtraBytes(header.ProtocolVersion);
+        r.SkipPadding(SensorTypesWireLength(fixedLength, numSensors) - (numSensors * sizeof(ushort)));
 
         var mineLocations = new List<Vector3Float>(numMines);
         for (var i = 0; i < numMines; i++) mineLocations.Add(Vector3Float.Unmarshal(ref r));
 
         // Everything after the mine locations is the per-mine block.
-        var fixedBytes = MinimumWireLength + SensorTypesWireLength(numSensors) + (numMines * Vector3Float.WireLength);
+        var fixedBytes = fixedLength + SensorTypesWireLength(fixedLength, numSensors) + (numMines * Vector3Float.WireLength);
         var optionalBytes = Math.Max(0, header.Length - fixedBytes);
         var optional = optionalBytes > 0 ? r.ReadBytes(optionalBytes).ToArray() : [];
 
         return new MinefieldDataPdu(
             header, minefieldId, simId, seqNumber, requestId, pduSeq,
-            numPdus, dataFilter, mineType, mineLocations, sensors, optional);
+            numPdus, dataFilter, mineType, mineLocations, sensors, optional)
+        { RequestingEntity = requestingEntity };
     }
 }
 
@@ -353,10 +408,9 @@ public sealed record MinefieldDataPdu(
 /// originator can retransmit. IEEE 1278.1 §5.3.10.4.
 /// </summary>
 /// <remarks>
-/// Same PDU type id (40) as Collision-Elastic in family 1; the
-/// protocol-family byte disambiguates. Receivers must never dispatch
-/// by PDU type alone — this is why Bowire's decoder tables key on
-/// (family, type) pairs.
+/// The sequence numbers follow the count directly. The plugin used to put
+/// two padding bytes in between, which none of KDIS, open-dis dis6 or
+/// open-dis dis7 has (#58).
 /// </remarks>
 public sealed record MinefieldResponseNackPdu(
     PduHeader Header,
@@ -366,11 +420,21 @@ public sealed record MinefieldResponseNackPdu(
     byte NumberOfMissingPdus,
     byte[] MissingPduSequenceNumbers)
 {
-    /// <summary>Fixed wire length before the missing-pdu list.</summary>
-    public const int MinimumWireLength = 26;
+    /// <summary>Fixed wire length before the missing-pdu list (IEEE 1278.1-2012 layout).</summary>
+    public const int MinimumWireLength = 24;
+
+    /// <summary>
+    /// Entity number of the requesting entity. Only a pre-2012 (V6) PDU carries
+    /// it — there the requester is an entity, site:application:entity; from
+    /// IEEE 1278.1-2012 on it is a simulation and this stays 0 (#58).
+    /// </summary>
+    public ushort RequestingEntity { get; init; }
+
+    /// <summary>Fixed wire length for this PDU's protocol version (<see cref="MinimumWireLength"/> is the 2012 one).</summary>
+    public int FixedWireLength => MinimumWireLength + MinefieldRequester.ExtraBytes(Header.ProtocolVersion);
 
     /// <summary>Total wire length including the missing-pdu list.</summary>
-    public int WireLength => MinimumWireLength + MissingPduSequenceNumbers.Length;
+    public int WireLength => FixedWireLength + MissingPduSequenceNumbers.Length;
 
     /// <summary>Serialise into <paramref name="destination"/>.</summary>
     public int Marshal(Span<byte> destination)
@@ -385,10 +449,9 @@ public sealed record MinefieldResponseNackPdu(
         header.Marshal(ref w);
 
         MinefieldId.Marshal(ref w);
-        RequestingSimulationId.Marshal(ref w);
+        MinefieldRequester.Marshal(ref w, Header.ProtocolVersion, RequestingSimulationId, RequestingEntity);
         w.WriteByte(RequestId);
         w.WriteByte(NumberOfMissingPdus);
-        w.WriteUInt16(0); // padding
         w.WriteBytes(MissingPduSequenceNumbers);
         return w.Offset;
     }
@@ -407,12 +470,12 @@ public sealed record MinefieldResponseNackPdu(
         var r = new DisWireReader(source);
         var header = PduHeader.Unmarshal(ref r);
         var minefieldId = EntityId.Unmarshal(ref r);
-        var simId = SimulationAddress.Unmarshal(ref r);
+        var (simId, requestingEntity) = MinefieldRequester.Unmarshal(ref r, header.ProtocolVersion);
         var requestId = r.ReadByte();
         var numMissing = r.ReadByte();
-        r.SkipPadding(2);
         var missing = numMissing > 0 ? r.ReadBytes(numMissing).ToArray() : [];
         return new MinefieldResponseNackPdu(
-            header, minefieldId, simId, requestId, numMissing, missing);
+            header, minefieldId, simId, requestId, numMissing, missing)
+        { RequestingEntity = requestingEntity };
     }
 }
