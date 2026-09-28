@@ -75,9 +75,9 @@ Type ids per IEEE 1278.1-2012 §5.3 Table 5. "Ver." = version the PDU first appe
 |----|------|------|--------|-------|
 | 1  | Entity State | V6 + V7 header | ✅ | Marshal + unmarshal + variable-parameter records. |
 | 4  | Collision | V6 | ✅ | Full roundtrip. |
-| 40 | Collision-Elastic | V7 | ✅ | Full roundtrip incl. 6-component intermediate-result matrix. |
+| 66 | Collision-Elastic | V7 | ✅ | Full roundtrip incl. 6-component intermediate-result matrix. |
 | 67 | Entity State Update | V6/V7 | ✅ | Full roundtrip incl. variable parameters. |
-| 71 | Attribute | V7 | ✅ | Full typed roundtrip incl. Attribute Record Sets (§6.2.12) and Standard Variable Records (§6.2.82). |
+| 72 | Attribute | V7 | ✅ | Full typed roundtrip incl. Attribute Record Sets (§6.2.12) and Standard Variable Records (§6.2.82). |
 
 ### Family 2 — Warfare
 
@@ -151,7 +151,7 @@ Type ids per IEEE 1278.1-2012 §5.3 Table 5. "Ver." = version the PDU first appe
 | 37 | Minefield State | V6 | ✅ | Full typed roundtrip incl. `Vector2Float` perimeter points and `EntityType` mine types. |
 | 38 | Minefield Query | V6 | ✅ | Full typed roundtrip incl. perimeter points and sensor-type list. |
 | 39 | Minefield Data | V6 | ✅ | Typed mine locations + sensor types; DataFilter-gated optional per-mine arrays kept as `OptionalFieldsBlob` (bit-to-array mapping needs SISO test vectors to type safely). |
-| 40 | Minefield Response NACK | V6 | ✅ | Missing-PDU list roundtrips. Same type id 40 as CollisionElastic; family byte disambiguates. |
+| 40 | Minefield Response NACK | V6 | ✅ | Missing-PDU list roundtrips. |
 
 ### Family 9 — Synthetic Environment
 
@@ -187,11 +187,11 @@ Type ids per IEEE 1278.1-2012 §5.3 Table 5. "Ver." = version the PDU first appe
 
 | ID | Name | Ver. | Status | Notes |
 |----|------|------|--------|-------|
-| 66 | TSPI (Time Space Position Information) | V6 | ✅ | Header + LiveEntityId typed; compressed bit-packed payload round-trips verbatim (flag-gated field decoding deferred — opendis7 reference impl also doesn't decode). |
-| 99 | Appearance | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
-| 100 | Articulated Parts | V6 | ✅ | Full typed roundtrip with `IReadOnlyList<VariableParameter>` — articulated / attached / separation records typed. |
-| 101 | LE Fire | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
-| 102 | LE Detonation | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
+| 46 | TSPI (Time Space Position Information) | V6 | ✅ | Header + LiveEntityId typed; compressed bit-packed payload round-trips verbatim (flag-gated field decoding deferred — opendis7 reference impl also doesn't decode). |
+| 47 | Appearance | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
+| 48 | Articulated Parts | V6 | ✅ | Full typed roundtrip with `IReadOnlyList<VariableParameter>` — articulated / attached / separation records typed. |
+| 49 | LE Fire | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
+| 50 | LE Detonation | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
 
 ### Family 12 — Non-Real-Time
 
@@ -203,8 +203,12 @@ Type ids per IEEE 1278.1-2012 §5.3 Table 5. "Ver." = version the PDU first appe
 
 | ID | Name | Ver. | Status | Notes |
 |----|------|------|--------|-------|
-| 81 | IO Action | V7 | ✅ | Full typed roundtrip incl. IO record sets as `StandardVariableRecord`s (§6.2.82). |
-| 82 | IO Report | V7 | ✅ | Full typed roundtrip incl. IO record sets as `StandardVariableRecord`s (§6.2.82). |
+| 70 | IO Action | V7 | ✅ | Full typed roundtrip incl. IO record sets as `StandardVariableRecord`s (§6.2.82). |
+| 71 | IO Report | V7 | ✅ | Full typed roundtrip incl. IO record sets as `StandardVariableRecord`s (§6.2.82). |
+
+> **PDU type ids** in the tables above are SISO-REF-010 v37, enumeration uid 4, and a test pins every value.
+> Nine of them were wrong until #57 (Collision-Elastic on 40, the Live Entity family on 66 and 99–102, the IO pair on 81/82,
+> Attribute on 71). Round-trip tests could not see it: marshal and unmarshal read the same enum.
 
 ## Enumerations (SISO-REF-010)
 

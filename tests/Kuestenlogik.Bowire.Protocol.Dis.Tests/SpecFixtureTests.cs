@@ -235,26 +235,120 @@ public sealed class SpecFixtureTests
         Assert.Equal(7, (int)DisProtocolVersion.Ieee1278_1_2012); // colloquial "DIS v7"
     }
 
-    [Fact]
-    public void DisPduType_Enum_ValuesMatchSpecWireCodes()
+    /// <summary>
+    /// Every PDU type id, from SISO-REF-010 v37, enumeration uid 4 ("DIS-PDU
+    /// Type") — the canonical table, checked 2026-09-28.
+    /// </summary>
+    /// <remarks>
+    /// This used to pin a selection, against "IEEE 1278.1-2012 Table 5", and
+    /// nine of the enum's values were wrong without the selection noticing —
+    /// two of the wrong ones were in it (#57). Marshal and Unmarshal share the
+    /// enum, so no round-trip can see a wrong number; only a table from outside
+    /// the code can. So: every member, from the source, both directions — a
+    /// member added without an entry here fails too.
+    /// </remarks>
+    private static readonly Dictionary<string, int> SisoPduTypes = new(StringComparer.Ordinal)
     {
-        // IEEE 1278.1-2012 Table 5 — PDU type codes. Pin the enum
-        // values against the on-wire ids.
-        Assert.Equal(1, (int)DisPduType.EntityState);
-        Assert.Equal(2, (int)DisPduType.Fire);
-        Assert.Equal(3, (int)DisPduType.Detonation);
-        Assert.Equal(4, (int)DisPduType.Collision);
-        Assert.Equal(15, (int)DisPduType.Acknowledge);
-        Assert.Equal(20, (int)DisPduType.Data);
-        Assert.Equal(23, (int)DisPduType.ElectromagneticEmission);
-        Assert.Equal(25, (int)DisPduType.Transmitter);
-        Assert.Equal(26, (int)DisPduType.Signal);
-        Assert.Equal(40, (int)DisPduType.CollisionElastic); // family 1 — disambiguated from id 40 family 8
-        Assert.Equal(40, (int)DisPduType.MinefieldResponseNack); // family 8
-        Assert.Equal(66, (int)DisPduType.TimeSpacePositionInformation);
-        Assert.Equal(67, (int)DisPduType.EntityStateUpdate);
-        Assert.Equal(68, (int)DisPduType.DirectedEnergyFire);
-        Assert.Equal(71, (int)DisPduType.Attribute);
-        Assert.Equal(82, (int)DisPduType.InformationOperationsReport);
+        ["Other"] = 0,
+        ["EntityState"] = 1,
+        ["Fire"] = 2,
+        ["Detonation"] = 3,
+        ["Collision"] = 4,
+        ["ServiceRequest"] = 5,
+        ["ResupplyOffer"] = 6,
+        ["ResupplyReceived"] = 7,
+        ["ResupplyCancel"] = 8,
+        ["RepairComplete"] = 9,
+        ["RepairResponse"] = 10,
+        ["CreateEntity"] = 11,
+        ["RemoveEntity"] = 12,
+        ["StartResume"] = 13,
+        ["StopFreeze"] = 14,
+        ["Acknowledge"] = 15,
+        ["ActionRequest"] = 16,
+        ["ActionResponse"] = 17,
+        ["DataQuery"] = 18,
+        ["SetData"] = 19,
+        ["Data"] = 20,
+        ["EventReport"] = 21,
+        ["Comment"] = 22,
+        ["ElectromagneticEmission"] = 23,
+        ["Designator"] = 24,
+        ["Transmitter"] = 25,
+        ["Signal"] = 26,
+        ["Receiver"] = 27,
+        ["UnderwaterAcoustic"] = 29,
+        ["SupplementalEmissionEntityState"] = 30,
+        ["IntercomSignal"] = 31,
+        ["IntercomControl"] = 32,
+        ["AggregateState"] = 33,
+        ["IsGroupOf"] = 34,
+        ["TransferOwnership"] = 35,
+        ["IsPartOf"] = 36,
+        ["MinefieldState"] = 37,
+        ["MinefieldQuery"] = 38,
+        ["MinefieldData"] = 39,
+        ["MinefieldResponseNack"] = 40,
+        ["EnvironmentalProcess"] = 41,
+        ["GriddedData"] = 42,
+        ["PointObjectState"] = 43,
+        ["LinearObjectState"] = 44,
+        ["ArealObjectState"] = 45,
+        ["TimeSpacePositionInformation"] = 46,
+        ["Appearance"] = 47,
+        ["ArticulatedParts"] = 48,
+        ["LiveEntityFire"] = 49,
+        ["LiveEntityDetonation"] = 50,
+        ["CreateEntityR"] = 51,
+        ["RemoveEntityR"] = 52,
+        ["StartResumeR"] = 53,
+        ["StopFreezeR"] = 54,
+        ["AcknowledgeR"] = 55,
+        ["ActionRequestR"] = 56,
+        ["ActionResponseR"] = 57,
+        ["DataQueryR"] = 58,
+        ["SetDataR"] = 59,
+        ["DataR"] = 60,
+        ["EventReportR"] = 61,
+        ["CommentR"] = 62,
+        ["RecordR"] = 63,
+        ["SetRecordR"] = 64,
+        ["RecordQueryR"] = 65,
+        ["CollisionElastic"] = 66,
+        ["EntityStateUpdate"] = 67,
+        ["DirectedEnergyFire"] = 68,
+        ["EntityDamageStatus"] = 69,
+        ["InformationOperationsAction"] = 70,
+        ["InformationOperationsReport"] = 71,
+        ["Attribute"] = 72,
+    };
+
+    [Fact]
+    public void DisPduType_Every_Value_Is_The_Siso_Ref_010_Wire_Id()
+    {
+        var wrong = new List<string>();
+        foreach (var name in Enum.GetNames<DisPduType>())
+        {
+            var actual = (int)Enum.Parse<DisPduType>(name);
+            if (!SisoPduTypes.TryGetValue(name, out var expected))
+                wrong.Add($"{name} = {actual} has no SISO-REF-010 entry in this test");
+            else if (actual != expected)
+                wrong.Add($"{name} = {actual}, SISO-REF-010 says {expected}");
+        }
+        Assert.True(wrong.Count == 0, string.Join(Environment.NewLine, wrong));
+    }
+
+    [Fact]
+    public void DisPduType_No_Two_Names_Share_A_Wire_Id()
+    {
+        // A PDU type id is unique across families; there is no family byte
+        // that tells two of them apart. The collision this rules out is how
+        // #57 was found.
+        var clashes = Enum.GetValues<DisPduType>()
+            .GroupBy(v => (int)v)
+            .Where(g => Enum.GetNames<DisPduType>().Count(n => (int)Enum.Parse<DisPduType>(n) == g.Key) > 1)
+            .Select(g => g.Key)
+            .ToList();
+        Assert.Empty(clashes);
     }
 }

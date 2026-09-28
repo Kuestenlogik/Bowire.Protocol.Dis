@@ -72,6 +72,14 @@ public enum DisProtocolFamily
 /// reserved; receivers should either route by the family byte or
 /// treat them as Other.
 /// </summary>
+/// <remarks>
+/// Values are SISO-REF-010 v37, enumeration uid 4 ("DIS-PDU Type"), and a
+/// test pins every one of them. Nine were wrong until #57 — Collision-Elastic
+/// sat on 40 next to Minefield Response NACK with a comment claiming the
+/// family byte told them apart. It does not: a PDU type id is unique across
+/// families. Marshal and Unmarshal shared the wrong numbers, so every
+/// round-trip test passed while the wire said something else.
+/// </remarks>
 public enum DisPduType
 {
     /// <summary>Not specified.</summary>
@@ -80,9 +88,9 @@ public enum DisPduType
     // ---- Family 1: Entity Information / Interaction ----
     EntityState = 1,
     Collision = 4,
-    CollisionElastic = 40,
+    CollisionElastic = 66,
     EntityStateUpdate = 67,
-    Attribute = 71,
+    Attribute = 72,
 
     // ---- Family 2: Warfare ----
     Fire = 2,
@@ -135,7 +143,7 @@ public enum DisPduType
     MinefieldState = 37,
     MinefieldQuery = 38,
     MinefieldData = 39,
-    MinefieldResponseNack = 40, // same id as CollisionElastic; disambiguated by family byte
+    MinefieldResponseNack = 40,
 
     // ---- Family 9: Synthetic Environment ----
     EnvironmentalProcess = 41,
@@ -162,15 +170,15 @@ public enum DisPduType
     RecordQueryR = 65,
 
     // ---- Family 11: Live Entity ----
-    TimeSpacePositionInformation = 66,
-    Appearance = 99,
-    ArticulatedParts = 100,
-    LiveEntityFire = 101,
-    LiveEntityDetonation = 102,
+    TimeSpacePositionInformation = 46,
+    Appearance = 47,
+    ArticulatedParts = 48,
+    LiveEntityFire = 49,
+    LiveEntityDetonation = 50,
 
     // ---- Family 13: Information Operations (V7) ----
-    InformationOperationsAction = 81,
-    InformationOperationsReport = 82,
+    InformationOperationsAction = 70,
+    InformationOperationsReport = 71,
 }
 
 /// <summary>
