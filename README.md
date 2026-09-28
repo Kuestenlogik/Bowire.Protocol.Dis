@@ -103,6 +103,22 @@ Each step carries:
 - optional `metadata` (only on the first DIS step — applied to the
   whole DIS sub-sequence)
 
+By default every PDU goes out byte for byte as captured. The same
+metadata can re-scope a capture at replay time, without editing the
+recorded bytes (all opt-in; only the 12-byte header is rewritten, the
+body is sent as captured):
+
+| Metadata key (first DIS step) | Effect |
+|-------------------------------|--------|
+| `exercise-id` | `1`-`255` — replaces the exercise id in every PDU |
+| `pdu-types` | Comma-separated PDU type names or ids (`Fire, Detonation` or `2,3`) — every other PDU is not sent |
+| `entities` | Comma-separated `site:app:entity` triples — a PDU is sent when it names one of them in any role (firer or target of a Fire, either side of a Collision, ...). A PDU that does not decode names no entity and is not sent |
+| `retime` | `now` — the header timestamp becomes the time of sending, keeping the absolute/relative bit |
+
+A value the emitter does not understand (a misspelt PDU type, an
+exercise id of `0`) fails the mock's start rather than quietly
+filtering everything away.
+
 Use `bowire mock --recording my-exercise.bowire-recording.json`
 to start replay. `--loop` re-emits the sequence on repeat.
 
@@ -147,10 +163,12 @@ directly and this repo becomes a pure NuGet package.
 ## Status
 
 - **Live discovery + entity-scoped PDU streaming**: shipped.
-  EntityState PDUs decode markings, entity types, force ids; other PDU
-  kinds surface header + raw bytes for hex-dumping.
-- **Mock replay**: shipped (raw byte replay only — the emitter doesn't
-  re-decode; it ships the captured bytes verbatim).
+  Every PDU type the plugin models reaches the stream as its typed
+  record (`pdu`) next to the raw bytes, and on an entity stream when it
+  names that entity in any role.
+- **Mock replay**: shipped. Verbatim by default; exercise id, timestamp,
+  PDU-type and entity filters can be applied at replay time via step
+  metadata.
 - **Composition with the [UDP plugin](https://github.com/Kuestenlogik/Bowire.Protocol.Udp)**:
   run both at once for typed (`dis`) plus raw-bytes (`udp`) views of
   the same group.

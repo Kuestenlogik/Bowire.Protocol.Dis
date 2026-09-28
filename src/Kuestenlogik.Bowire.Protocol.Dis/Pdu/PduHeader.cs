@@ -16,7 +16,7 @@ namespace Kuestenlogik.Bowire.Protocol.Dis.Pdu;
 /// <param name="ProtocolVersion">First byte — <see cref="DisProtocolVersion"/>.</param>
 /// <param name="ExerciseId">Exercise id (1–255). Receivers filter traffic by this.</param>
 /// <param name="PduType">Third byte — <see cref="DisPduType"/>.</param>
-/// <param name="ProtocolFamily">Fourth byte — <see cref="DisProtocolFamily"/>. Disambiguates PDU type ids that collide across families.</param>
+/// <param name="ProtocolFamily">Fourth byte — <see cref="DisProtocolFamily"/>. Groups PDU types for receivers that filter by family; PDU type ids are unique on their own (SISO-REF-010), so it is not needed to tell them apart.</param>
 /// <param name="Timestamp">32-bit relative or absolute timestamp per §5.2.31.</param>
 /// <param name="Length">Total PDU length in bytes, including the header itself.</param>
 /// <param name="Padding">Two bytes of reserved padding. V7 repurposes the first as <c>pduStatus</c>; V6 requires zero here.</param>

@@ -85,7 +85,16 @@ Each step carries:
 - `capturedAt` — millisecond timestamp used for emission pacing
 - optional `metadata` (only on the first DIS step — applied to the whole DIS sub-sequence)
 
-Replay is a thin relay — the emitter doesn't re-decode the PDUs, it ships the captured bytes verbatim. Use `bowire mock --recording my-exercise.bwr --loop` for repeated replay.
+By default replay is a thin relay that ships the captured bytes verbatim. Opt-in metadata re-scopes a capture without editing it; only the 12-byte header is rewritten:
+
+| Metadata key (first DIS step) | Effect |
+|-------------------------------|--------|
+| `exercise-id` | `1`-`255` — replaces the exercise id in every PDU |
+| `pdu-types` | Comma-separated PDU type names or ids — every other PDU is not sent |
+| `entities` | Comma-separated `site:app:entity` triples — a PDU is sent when it names one of them in any role; one that does not decode is not sent |
+| `retime` | `now` — the header timestamp becomes the time of sending, keeping the absolute/relative bit |
+
+A value the emitter does not understand fails the mock's start rather than filtering everything away. Use `bowire mock --recording my-exercise.bwr --loop` for repeated replay.
 
 ## Relationship to the UDP plugin
 

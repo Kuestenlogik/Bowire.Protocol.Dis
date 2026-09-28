@@ -32,6 +32,12 @@ namespace Kuestenlogik.Bowire.Protocol.Dis;
 ///   local subnet).</item>
 /// </list>
 /// <para>
+/// By default each PDU goes out byte for byte as captured. The same metadata
+/// can ask for replay-time changes — another exercise id, the send time as
+/// timestamp, only some PDU types or entities; see
+/// <see cref="DisReplayRewrite"/> (#24).
+/// </para>
+/// <para>
 /// This emitter runs in a background task for the full lifetime of
 /// the mock server; it loops the PDU sequence when
 /// <see cref="MockEmitterOptions.Loop"/> is set, mirroring the MQTT
@@ -44,6 +50,7 @@ public sealed class DisMockEmitter : IBowireMockEmitter
 {
     private UdpClient? _socket;
     private IPEndPoint? _destination;
+    private DisReplayRewrite? _rewrite;
     private CancellationTokenSource? _cts;
     private Task? _schedulerTask;
     private bool _disposed;
@@ -73,6 +80,9 @@ public sealed class DisMockEmitter : IBowireMockEmitter
         if (disSteps.Count == 0) return Task.CompletedTask;
 
         var (group, port, ttl) = ReadNetworkConfig(disSteps[0]);
+        // Before the socket: a misspelt rewrite key fails the start instead
+        // of replaying something other than what was asked for.
+        _rewrite = DisReplayRewrite.Parse(disSteps[0].Metadata);
         _socket = new UdpClient(AddressFamily.InterNetwork);
         _socket.Client.SetSocketOption(
             SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, ttl);
@@ -84,8 +94,8 @@ public sealed class DisMockEmitter : IBowireMockEmitter
         _schedulerTask = Task.Run(() => RunAsync(disSteps, options, logger, _cts.Token), _cts.Token);
 
         logger.LogInformation(
-            "dis-emitter listening → udp://{Group}:{Port} (ttl={Ttl}, pduSteps={Count})",
-            group, port, ttl, disSteps.Count);
+            "dis-emitter listening → udp://{Group}:{Port} (ttl={Ttl}, pduSteps={Count}, rewrite={Rewrite})",
+            group, port, ttl, disSteps.Count, _rewrite?.ToString() ?? "none");
         return Task.CompletedTask;
     }
 
@@ -179,6 +189,17 @@ public sealed class DisMockEmitter : IBowireMockEmitter
                 "dis-emitter skipping step '{StepId}': malformed base64 PDU ({Message}).",
                 step.Id, ex.Message);
             return;
+        }
+
+        if (_rewrite is not null)
+        {
+            var rewritten = _rewrite.Apply(payload, DateTimeOffset.UtcNow);
+            if (rewritten is null)
+            {
+                logger.LogDebug("dis-emitter filtered out step '{StepId}'.", step.Id);
+                return;
+            }
+            payload = rewritten;
         }
 
         try
