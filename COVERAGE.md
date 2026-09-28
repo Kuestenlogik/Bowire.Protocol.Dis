@@ -185,13 +185,15 @@ Type ids per IEEE 1278.1-2012 §5.3 Table 5. "Ver." = version the PDU first appe
 
 ### Family 11 — Live Entity
 
+The `Fields` views follow KDIS, the one open implementation that decodes these PDUs (open-dis does not); there is no SISO test vector. The payload bytes stay what a PDU writes back, so it round-trips byte for byte, and `Fields` is null when the payload does not add up to what the flags announce or a reserved flag bit is set. The compressed fixed-point numbers are given as the raw integers on the wire: KDIS notes that the standard does not fix their binary point, and calls its own choice an educated guess.
+
 | ID | Name | Ver. | Status | Notes |
 |----|------|------|--------|-------|
-| 46 | TSPI (Time Space Position Information) | V6 | ✅ | Header + LiveEntityId typed; compressed bit-packed payload round-trips verbatim (flag-gated field decoding deferred — opendis7 reference impl also doesn't decode). |
-| 47 | Appearance | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
+| 46 | TSPI (Time Space Position Information) | V6 | ✅ | Header + LiveEntityId typed; flag-gated fields as `Fields` (`TspiFields`, #26). |
+| 47 | Appearance | V6 | ✅ | Header + LiveEntityId typed; flag-gated fields as `Fields` (`LeAppearanceFields`, #26). |
 | 48 | Articulated Parts | V6 | ✅ | Full typed roundtrip with `IReadOnlyList<VariableParameter>` — articulated / attached / separation records typed. |
-| 49 | LE Fire | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
-| 50 | LE Detonation | V6 | ✅ | Header + LiveEntityId typed; compressed flag-gated payload round-trips verbatim. |
+| 49 | LE Fire | V6 | ✅ | Header + LiveEntityId typed; flag-gated fields as `Fields` (`LeFireFields`, #26). |
+| 50 | LE Detonation | V6 | ✅ | Header + LiveEntityId typed; flag-gated fields as `Fields` (`LeDetonationFields`, #26). |
 
 ### Family 12 — Non-Real-Time
 

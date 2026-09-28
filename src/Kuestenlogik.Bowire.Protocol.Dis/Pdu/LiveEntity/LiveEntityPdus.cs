@@ -8,21 +8,13 @@ using Kuestenlogik.Bowire.Protocol.Dis.Wire;
 namespace Kuestenlogik.Bowire.Protocol.Dis.Pdu.LiveEntity;
 
 // Base container for the Live Entity family's PDU layout:
-// Header + LiveEntityId + opaque payload blob.
+// Header + LiveEntityId + payload bytes.
 //
-// The Live Entity family (IEEE 1278.1 §5.3.13) uses extensively
-// bit-packed compressed field layouts: scaled int32 position,
-// scaled int8 orientation, scaled int16 velocity, bit-packed
-// flag unions. The exact byte positions of the optional fields
-// depend on the leading flag byte, so a typed decoder needs
-// both spec precision AND test vectors from real live-range
-// exercises to verify.
-//
-// This codec ships the conservative shape — typed header +
-// typed LiveEntityId + opaque compressed payload — so
-// recordings round-trip losslessly and users can slice the
-// payload with their own decoder. Typed per-field access lands
-// once authoritative test fixtures are available.
+// TSPI, Appearance, LE Fire and LE Detonation pack their fields behind flag
+// bytes. The payload bytes are what these records write back, so a PDU
+// round-trips byte for byte whatever it carries; each record also offers a
+// typed view on them (LiveEntityFields, #26) that is null whenever the bytes
+// do not read cleanly.
 internal static class LiveEntityCodec
 {
     internal static int Marshal(
@@ -57,18 +49,18 @@ internal static class LiveEntityCodec
     }
 }
 
-// --- PDU: TSPI (66) ----------------------------------------------------------
+// --- PDU: TSPI (46) ----------------------------------------------------------
 
 /// <summary>
-/// Time Space Position Information PDU (type 66, family 11). The
+/// Time Space Position Information PDU (type 46, family 11). The
 /// Live Entity family's compressed equivalent of Entity State —
 /// reports the position / velocity / orientation of a live-range
 /// entity using bit-packed fields to fit inside tactical-data-link
 /// bandwidth budgets. IEEE 1278.1 §5.3.13.1.
 /// </summary>
 /// <remarks>
-/// Payload carried as opaque <see cref="Payload"/> bytes pending
-/// typed bit-packed field access.
+/// <see cref="Payload"/> is written back as it is; <see cref="Fields"/>
+/// reads it (#26).
 /// </remarks>
 public sealed record TimeSpacePositionInformationPdu(
     PduHeader Header,
@@ -77,6 +69,13 @@ public sealed record TimeSpacePositionInformationPdu(
 {
     /// <summary>Wire length before the payload.</summary>
     public const int MinimumWireLength = PduHeader.WireLength + LiveEntityId.WireLength;
+
+    /// <summary>
+    /// The payload's fields, read per its flag bytes (#26) — null when the
+    /// payload does not add up to what the flags announce. <see cref="Payload"/>
+    /// is what is written back either way.
+    /// </summary>
+    public TspiFields? Fields => LiveEntityFields.TryDecodeTspi(Payload);
 
     /// <summary>Total wire length including the payload.</summary>
     public int WireLength => MinimumWireLength + Payload.Length;
@@ -101,10 +100,10 @@ public sealed record TimeSpacePositionInformationPdu(
     }
 }
 
-// --- PDU: Appearance (99) ----------------------------------------------------
+// --- PDU: Appearance (47) ----------------------------------------------------
 
 /// <summary>
-/// Appearance PDU (type 99, family 11). Live-entity equivalent of
+/// Appearance PDU (type 47, family 11). Live-entity equivalent of
 /// the Entity State appearance word — reports visual state changes
 /// (lights, damage, smoke) for a live-range entity.
 /// IEEE 1278.1 §5.3.13.2.
@@ -116,6 +115,13 @@ public sealed record AppearancePdu(
 {
     /// <summary>Wire length before the payload.</summary>
     public const int MinimumWireLength = PduHeader.WireLength + LiveEntityId.WireLength;
+
+    /// <summary>
+    /// The payload's fields, read per its flag bytes (#26) — null when the
+    /// payload does not add up to what the flags announce. <see cref="Payload"/>
+    /// is what is written back either way.
+    /// </summary>
+    public LeAppearanceFields? Fields => LiveEntityFields.TryDecodeAppearance(Payload);
 
     /// <summary>Total wire length including the payload.</summary>
     public int WireLength => MinimumWireLength + Payload.Length;
@@ -140,10 +146,10 @@ public sealed record AppearancePdu(
     }
 }
 
-// --- PDU: Articulated Parts (100) --------------------------------------------
+// --- PDU: Articulated Parts (48) --------------------------------------------
 
 /// <summary>
-/// Articulated Parts PDU (type 100, family 11). Reports the current
+/// Articulated Parts PDU (type 48, family 11). Reports the current
 /// state of one or more articulated parts on a live-range entity
 /// (turret azimuth, hatch position, gear, ...). Compressed format
 /// per IEEE 1278.1 §5.3.13.3.
@@ -203,10 +209,10 @@ public sealed record ArticulatedPartsPdu(
     }
 }
 
-// --- PDU: LE Fire (101) ------------------------------------------------------
+// --- PDU: LE Fire (49) ------------------------------------------------------
 
 /// <summary>
-/// Live Entity Fire PDU (type 101, family 11). Compressed Fire PDU
+/// Live Entity Fire PDU (type 49, family 11). Compressed Fire PDU
 /// for live-range exercises. IEEE 1278.1 §5.3.13.4.
 /// </summary>
 public sealed record LiveEntityFirePdu(
@@ -216,6 +222,13 @@ public sealed record LiveEntityFirePdu(
 {
     /// <summary>Wire length before the payload.</summary>
     public const int MinimumWireLength = PduHeader.WireLength + LiveEntityId.WireLength;
+
+    /// <summary>
+    /// The payload's fields, read per its flag bytes (#26) — null when the
+    /// payload does not add up to what the flags announce. <see cref="Payload"/>
+    /// is what is written back either way.
+    /// </summary>
+    public LeFireFields? Fields => LiveEntityFields.TryDecodeFire(Payload, LiveEntityId);
 
     /// <summary>Total wire length including the payload.</summary>
     public int WireLength => MinimumWireLength + Payload.Length;
@@ -240,10 +253,10 @@ public sealed record LiveEntityFirePdu(
     }
 }
 
-// --- PDU: LE Detonation (102) ------------------------------------------------
+// --- PDU: LE Detonation (50) ------------------------------------------------
 
 /// <summary>
-/// Live Entity Detonation PDU (type 102, family 11). Compressed
+/// Live Entity Detonation PDU (type 50, family 11). Compressed
 /// Detonation PDU for live-range exercises.
 /// IEEE 1278.1 §5.3.13.5.
 /// </summary>
@@ -254,6 +267,13 @@ public sealed record LiveEntityDetonationPdu(
 {
     /// <summary>Wire length before the payload.</summary>
     public const int MinimumWireLength = PduHeader.WireLength + LiveEntityId.WireLength;
+
+    /// <summary>
+    /// The payload's fields, read per its flag bytes (#26) — null when the
+    /// payload does not add up to what the flags announce. <see cref="Payload"/>
+    /// is what is written back either way.
+    /// </summary>
+    public LeDetonationFields? Fields => LiveEntityFields.TryDecodeDetonation(Payload, LiveEntityId);
 
     /// <summary>Total wire length including the payload.</summary>
     public int WireLength => MinimumWireLength + Payload.Length;
