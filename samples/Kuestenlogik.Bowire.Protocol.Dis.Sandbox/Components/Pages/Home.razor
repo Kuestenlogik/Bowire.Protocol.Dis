@@ -95,7 +95,10 @@
     {
         Store.Move(move.Number, move.Latitude, move.Longitude, following: true);
         Store.StopFollowing(move.Number);
-        _following = null;
+        // Starting to follow another object ends this one; that report
+        // arrives after the new one is set and must not clear it.
+        if (_following == move.Number)
+            _following = null;
     }
 
     private async Task SelectAsync(ushort? number)

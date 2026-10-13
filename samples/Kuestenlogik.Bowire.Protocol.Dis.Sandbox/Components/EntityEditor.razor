@@ -26,7 +26,7 @@
     </label>
 
     <label>Höhe über Ellipsoid (m)
-        <input type="number" step="1" value="@Entity.Position.Altitude" @onchange="OnAltitudeChanged" />
+        <input type="number" step="any" value="@Entity.Position.Altitude.ToString(System.Globalization.CultureInfo.InvariantCulture)" @onchange="OnAltitudeChanged" />
     </label>
 
     <p class="hint">

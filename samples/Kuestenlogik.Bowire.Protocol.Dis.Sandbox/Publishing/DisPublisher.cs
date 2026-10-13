@@ -26,6 +26,7 @@ internal sealed class DisPublisher : BackgroundService
     private readonly TimeSpan _heartbeatInterval;
     private readonly Lock _gate = new();
     private readonly HashSet<ushort> _pendingFollowMoves = [];
+    private readonly Dictionary<ushort, DateTimeOffset> _lastFollowMoveAt = [];
     private DateTimeOffset _nextHeartbeat;
 
     public DisPublisher(
@@ -65,9 +66,29 @@ internal sealed class DisPublisher : BackgroundService
         }
     }
 
-    /// <summary>Sends pending follow moves, and the heartbeat when it is due.</summary>
+    /// <summary>
+    /// Settles followed entities whose mouse has stopped, sends pending follow
+    /// moves, and the heartbeat when it is due.
+    /// </summary>
     internal void Tick()
     {
+        // The browser only reports moves; a mouse that stops reports nothing.
+        // Two ticks without a move mean the object stands, and must say so,
+        // or every heartbeat would broadcast its last speed.
+        var resting = _time.GetUtcNow() - (2 * _tickInterval);
+        ushort[] idle;
+        lock (_gate)
+        {
+            idle = [.. _lastFollowMoveAt.Where(m => m.Value <= resting).Select(m => m.Key)];
+            foreach (var number in idle)
+                _lastFollowMoveAt.Remove(number);
+        }
+        foreach (var number in idle)
+        {
+            if (_store.Get(number) is { Following: true, SpeedMetresPerSecond: > 0 })
+                _store.Settle(number);
+        }
+
         ushort[] due;
         lock (_gate)
         {
@@ -99,9 +120,17 @@ internal sealed class DisPublisher : BackgroundService
         {
             case EntityChangeKind.Moved when entity.Following:
                 lock (_gate)
+                {
                     _pendingFollowMoves.Add(entity.Number);
+                    _lastFollowMoveAt[entity.Number] = _time.GetUtcNow();
+                }
                 break;
-            case EntityChangeKind.Added or EntityChangeKind.Moved or EntityChangeKind.Updated:
+            case EntityChangeKind.Moved:
+                lock (_gate)
+                    _lastFollowMoveAt.Remove(entity.Number);
+                SendEntityState(entity, deactivated: false);
+                break;
+            case EntityChangeKind.Added or EntityChangeKind.Updated:
                 SendEntityState(entity, deactivated: false);
                 break;
             case EntityChangeKind.PairsChanged:
@@ -110,7 +139,10 @@ internal sealed class DisPublisher : BackgroundService
                 break;
             case EntityChangeKind.Removed:
                 lock (_gate)
+                {
                     _pendingFollowMoves.Remove(entity.Number);
+                    _lastFollowMoveAt.Remove(entity.Number);
+                }
                 SendEntityState(entity, deactivated: true);
                 break;
         }

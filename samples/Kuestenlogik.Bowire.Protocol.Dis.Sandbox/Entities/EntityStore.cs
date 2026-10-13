@@ -109,6 +109,20 @@ internal sealed class EntityStore(TimeProvider time)
         return Raise(EntityChangeKind.Moved, stopped);
     }
 
+    /// <summary>
+    /// A followed entity whose mouse has stopped: it stays attached to the
+    /// cursor but stands still until the next move.
+    /// </summary>
+    public bool Settle(ushort number)
+    {
+        var settled = Mutate(number, e =>
+        {
+            _lastFollowMove.Remove(number);
+            return e with { SpeedMetresPerSecond = 0 };
+        });
+        return Raise(EntityChangeKind.Moved, settled);
+    }
+
     public bool Update(ushort number, string name, string presetId, Force force, double altitude)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

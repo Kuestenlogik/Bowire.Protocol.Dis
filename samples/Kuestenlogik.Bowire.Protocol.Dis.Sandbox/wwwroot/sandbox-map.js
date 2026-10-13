@@ -12,6 +12,8 @@ let basemaps = [];
 let followIntervalMs = 100;
 let following = null;
 let lastFollowSend = 0;
+let followPending = null;
+let followTimer = null;
 const markers = new Map();
 
 function styleFor(basemap) {
@@ -26,8 +28,19 @@ function styleFor(basemap) {
   return { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': basemap.color } }] };
 }
 
+function sendFollowMove() {
+  followTimer = null;
+  if (following === null || followPending === null) return;
+  lastFollowSend = performance.now();
+  dotnet.invokeMethodAsync('OnMarkerMoved', following, followPending.lat, followPending.lng, true);
+  followPending = null;
+}
+
 function endFollow(report) {
   if (following === null) return;
+  clearTimeout(followTimer);
+  followTimer = null;
+  followPending = null;
   const id = following;
   const marker = markers.get(id);
   following = null;
@@ -69,10 +82,12 @@ export function init(element, dotnetRef, options) {
   map.on('mousemove', e => {
     if (following === null) return;
     markers.get(following)?.setLngLat(e.lngLat);
-    const now = performance.now();
-    if (now - lastFollowSend < followIntervalMs) return;
-    lastFollowSend = now;
-    dotnet.invokeMethodAsync('OnMarkerMoved', following, e.lngLat.lat, e.lngLat.lng, true);
+    followPending = e.lngLat;
+    // Throttled, but the last position of a burst is sent late rather than
+    // dropped: where the mouse stops is where the object has to end up.
+    const wait = followIntervalMs - (performance.now() - lastFollowSend);
+    if (wait <= 0) sendFollowMove();
+    else if (followTimer === null) followTimer = setTimeout(sendFollowMove, wait);
   });
 
   window.addEventListener('keydown', onKeyDown);

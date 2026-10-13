@@ -98,6 +98,31 @@ public sealed class DisPublisherTests : IDisposable
     }
 
     [Fact]
+    public void Following_WhenTheMouseRests_SettlesToStandingStill()
+    {
+        var e = _store.Add("tank", Force.Friendly, 0, 0);
+        _store.Move(e.Number, 0, 0, following: true);
+        _time.Advance(TimeSpan.FromSeconds(1));
+        _store.Move(e.Number, 0.001, 0, following: true);
+        _publisher.Tick();
+        _sink.Datagrams.Clear();
+
+        // No move for two ticks: the mouse has stopped, the object has not left.
+        _time.Advance(TimeSpan.FromMilliseconds(250));
+        _publisher.Tick();
+
+        var pdu = PluginEntityState.Unmarshal(Assert.Single(_sink.Datagrams));
+        Assert.Equal(PluginDeadReckoning.Static, pdu.DeadReckoning.Algorithm);
+        Assert.Equal(default, pdu.LinearVelocity);
+        Assert.Equal(0.001, Latitude(_sink.Datagrams[0]), 7);
+        Assert.True(_store.Get(e.Number)!.Following);
+
+        _time.Advance(TimeSpan.FromMilliseconds(250));
+        _publisher.Tick();
+        Assert.Single(_sink.Datagrams);
+    }
+
+    [Fact]
     public void StopFollowing_SendsTheRestingStateAtOnce()
     {
         var e = _store.Add("tank", Force.Friendly, 0, 0);
