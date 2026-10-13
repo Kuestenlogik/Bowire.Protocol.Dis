@@ -4,9 +4,11 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Kuestenlogik.Bowire.Protocol.Dis.Tests/Kuestenlogik.Bowire.Protocol.Dis.Tests.csproj" />
+    <Project Path="tests/Kuestenlogik.Bowire.Protocol.Dis.Sandbox.Tests/Kuestenlogik.Bowire.Protocol.Dis.Sandbox.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Kuestenlogik.Bowire.Protocol.Dis.Sample/Kuestenlogik.Bowire.Protocol.Dis.Sample.csproj" />
+    <Project Path="samples/Kuestenlogik.Bowire.Protocol.Dis.Sandbox/Kuestenlogik.Bowire.Protocol.Dis.Sandbox.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/SisoGen/SisoGen.csproj" />

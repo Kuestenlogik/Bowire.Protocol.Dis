@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- Sample-app code, not a library: CA1515 (make types internal) does
+         not apply to an app, CA1873 (defer logger arguments) is noise at
+         this log volume, and CA1056 (URI properties should be Uri) would
+         turn tile templates like {z}/{x}/{y} into escaped Uris. -->
+    <NoWarn>$(NoWarn);CA1515;CA1873;CA1056</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Deliberately not the plugin: the sandbox encodes with an
+         independent library so its tests exercise Bowire's decoder. -->
+    <PackageReference Include="OpenDisNet" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kuestenlogik.Bowire.Protocol.Dis.Sandbox.Tests" />
+  </ItemGroup>
+</Project>
