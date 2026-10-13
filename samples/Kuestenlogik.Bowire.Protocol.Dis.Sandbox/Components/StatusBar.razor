@@ -1,0 +1,20 @@
+@implements IDisposable
+@inject PublisherStatus Status
+
+<header class="status-bar @(Status.Errors > 0 ? "has-errors" : "")">
+    <span>Ziel <code>udp://@Status.Target</code></span>
+    <span>gesendet @Status.Sent</span>
+    <span>Fehler @Status.Errors</span>
+    @if (Status.LastError is { } error)
+    {
+        <span class="last-error" title="@Status.LastErrorAt">zuletzt: @error</span>
+    }
+</header>
+
+@code {
+    protected override void OnInitialized() => Status.Changed += OnStatusChanged;
+
+    private void OnStatusChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Status.Changed -= OnStatusChanged;
+}
