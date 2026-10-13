@@ -37,7 +37,7 @@ internal sealed class SandboxOptions
     /// </summary>
     public uint CommentDatumId { get; set; } = 900000;
 
-    public MapView InitialView { get; set; } = new();
+    public MapViewOptions InitialView { get; set; } = new();
 
     /// <summary>Filled from configuration only; the binder appends to this list.</summary>
     public IList<BasemapOption> Basemaps { get; } = [];
@@ -45,7 +45,7 @@ internal sealed class SandboxOptions
     public IPEndPoint TargetEndPoint => IPEndPoint.Parse(Target);
 }
 
-internal sealed class MapView
+internal sealed class MapViewOptions
 {
     public double Latitude { get; set; } = 53.55;
 

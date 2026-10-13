@@ -1,0 +1,129 @@
+@inject EntityStore Store
+
+<section class="editor">
+    <h3>Objekt @Entity.Number</h3>
+
+    <label>Name
+        <input value="@_name" @onchange="OnNameChanged" maxlength="64" />
+    </label>
+    <p class="hint">Gesendet als Marking: <code>@PduFactory.MarkingText(_name)</code></p>
+
+    <label>Typ
+        <select value="@Entity.PresetId" @onchange="OnPresetChanged">
+            @foreach (var preset in EntityPreset.All)
+            {
+                <option value="@preset.Id">@preset.Label</option>
+            }
+        </select>
+    </label>
+
+    <label>Kräfte
+        <select value="@Entity.Force" @onchange="OnForceChanged">
+            <option value="@Force.Friendly">Eigene</option>
+            <option value="@Force.Opposing">Gegnerische</option>
+            <option value="@Force.Neutral">Neutrale</option>
+        </select>
+    </label>
+
+    <label>Höhe über Ellipsoid (m)
+        <input type="number" step="1" value="@Entity.Position.Altitude" @onchange="OnAltitudeChanged" />
+    </label>
+
+    <p class="hint">
+        @Entity.Position.Latitude.ToString("F5", System.Globalization.CultureInfo.InvariantCulture),
+        @Entity.Position.Longitude.ToString("F5", System.Globalization.CultureInfo.InvariantCulture)
+        · Kurs @Entity.HeadingDegrees.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)°
+        · @Entity.SpeedMetresPerSecond.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) m/s
+    </p>
+
+    <div class="toolbar">
+        <button class="@(Following ? "active" : "")" @onclick="() => FollowRequested.InvokeAsync()" disabled="@Following">
+            Maus folgen
+        </button>
+        <button class="danger" @onclick="() => Store.Remove(Entity.Number)">Löschen</button>
+    </div>
+    @if (Following)
+    {
+        <p class="hint">Klick setzt das Objekt ab, Esc bricht ab.</p>
+    }
+
+    <h4>Key-Value-Paare</h4>
+    <table class="pairs">
+        <tbody>
+            @foreach (var row in _rows)
+            {
+                <tr>
+                    <td><input placeholder="Schlüssel" @bind="row.Key" @bind:event="oninput" /></td>
+                    <td><input placeholder="Wert" @bind="row.Value" @bind:event="oninput" /></td>
+                    <td><button @onclick="() => _rows.Remove(row)" title="Entfernen">✕</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div class="toolbar">
+        <button @onclick="() => _rows.Add(new PairRow())">Paar hinzufügen</button>
+        <button @onclick="ApplyPairs">Übernehmen</button>
+    </div>
+    <p class="hint">Comment-PDU: @PairRules.CommentPduLength(Current()) / @PairRules.MaxCommentPduBytes Byte</p>
+    @if (_error is not null)
+    {
+        <p class="error">@_error</p>
+    }
+</section>
+
+@code {
+    private sealed class PairRow
+    {
+        public string Key { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    private string _name = "";
+    private List<PairRow> _rows = [];
+    private string? _error;
+
+    [Parameter, EditorRequired] public SandboxEntity Entity { get; set; } = default!;
+    [Parameter] public bool Following { get; set; }
+    [Parameter] public EventCallback FollowRequested { get; set; }
+
+    // The page gives every entity its own editor (@key), so this runs once
+    // per selection and moves on the map do not overwrite unsaved edits.
+    protected override void OnInitialized()
+    {
+        _name = Entity.Name;
+        _rows = [.. Entity.Pairs.Select(p => new PairRow { Key = p.Key, Value = p.Value })];
+    }
+
+    private List<KeyValuePair<string, string>> Current() =>
+        [.. _rows.Select(r => new KeyValuePair<string, string>(r.Key.Trim(), r.Value))];
+
+    private void OnNameChanged(ChangeEventArgs e)
+    {
+        var name = (e.Value as string ?? "").Trim();
+        if (name.Length == 0)
+        {
+            _error = "Der Name darf nicht leer sein.";
+            return;
+        }
+        _name = name;
+        _error = null;
+        Store.Update(Entity.Number, name, Entity.PresetId, Entity.Force, Entity.Position.Altitude);
+    }
+
+    private void OnPresetChanged(ChangeEventArgs e) =>
+        Store.Update(Entity.Number, _name, e.Value as string ?? Entity.PresetId, Entity.Force, Entity.Position.Altitude);
+
+    private void OnForceChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<Force>(e.Value as string, out var force))
+            Store.Update(Entity.Number, _name, Entity.PresetId, force, Entity.Position.Altitude);
+    }
+
+    private void OnAltitudeChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value as string, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var altitude))
+            Store.Update(Entity.Number, _name, Entity.PresetId, Entity.Force, altitude);
+    }
+
+    private void ApplyPairs() => Store.TrySetPairs(Entity.Number, Current(), out _error);
+}

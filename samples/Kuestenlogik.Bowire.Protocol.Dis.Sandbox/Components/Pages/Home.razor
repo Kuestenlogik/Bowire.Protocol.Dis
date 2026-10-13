@@ -1,3 +1,133 @@
 @page "/"
+@implements IDisposable
+@inject EntityStore Store
+@inject IOptions<SandboxOptions> Options
 
 <StatusBar />
+<div class="workspace">
+    <MapView @ref="_map" Ready="OnMapReady" MapClicked="OnMapClicked" MarkerMoved="OnMarkerMoved"
+             MarkerSelected="(ushort n) => SelectAsync(n)" FollowEnded="OnFollowEnded" />
+    <aside class="sidebar">
+        <div class="toolbar">
+            <select @onchange="OnBasemapChanged" title="Grundkarte">
+                @foreach (var basemap in Options.Value.Basemaps)
+                {
+                    <option value="@basemap.Id">@basemap.Name</option>
+                }
+            </select>
+            <select @bind="_presetForNew" title="Typ des neuen Objekts">
+                @foreach (var preset in EntityPreset.All)
+                {
+                    <option value="@preset.Id">@preset.Label</option>
+                }
+            </select>
+            <button class="@(_placing ? "active" : "")" @onclick="() => _placing = !_placing">Neues Objekt</button>
+        </div>
+        @if (_placing)
+        {
+            <p class="hint">Klick auf die Karte setzt das Objekt.</p>
+        }
+
+        <EntityList Entities="_entities" Selected="_selected" SelectedChanged="(ushort n) => SelectAsync(n)" />
+
+        @if (_selected is { } number && Store.Get(number) is { } entity)
+        {
+            <EntityEditor @key="number" Entity="entity" Following="_following == number" FollowRequested="StartFollowAsync" />
+        }
+    </aside>
+</div>
+
+@code {
+    private MapView? _map;
+    private IReadOnlyList<SandboxEntity> _entities = [];
+    private ushort? _selected;
+    private ushort? _following;
+    private bool _placing;
+    private string _presetForNew = EntityPreset.All[0].Id;
+
+    protected override void OnInitialized()
+    {
+        _entities = Store.Snapshot();
+        Store.Changed += OnStoreChanged;
+    }
+
+    private async Task OnMapReady()
+    {
+        foreach (var entity in Store.Snapshot())
+            await _map!.UpsertAsync(entity, entity.Number == _selected);
+    }
+
+    // Changes come from this page, other tabs and nobody else; all of them
+    // are drawn from here, so the map shows what the store holds.
+    private void OnStoreChanged(EntityChange change) => _ = InvokeAsync(async () =>
+    {
+        _entities = Store.Snapshot();
+        var number = change.Entity.Number;
+        if (change.Kind == EntityChangeKind.Removed)
+        {
+            if (_selected == number) _selected = null;
+            if (_following == number) _following = null;
+            if (_map is not null) await _map.RemoveAsync(number);
+        }
+        else if (_map is not null)
+        {
+            await _map.UpsertAsync(change.Entity, number == _selected);
+        }
+        StateHasChanged();
+    });
+
+    private async Task OnMapClicked(MapView.MapPoint point)
+    {
+        if (_placing)
+        {
+            _placing = false;
+            var entity = Store.Add(_presetForNew, Force.Friendly, point.Latitude, point.Longitude);
+            await SelectAsync(entity.Number);
+            return;
+        }
+        await SelectAsync(null);
+    }
+
+    private void OnMarkerMoved(MapView.MarkerMove move) =>
+        Store.Move(move.Number, move.Latitude, move.Longitude, move.Following);
+
+    private void OnFollowEnded(MapView.MarkerMove move)
+    {
+        Store.Move(move.Number, move.Latitude, move.Longitude, following: true);
+        Store.StopFollowing(move.Number);
+        _following = null;
+    }
+
+    private async Task SelectAsync(ushort? number)
+    {
+        var previous = _selected;
+        _selected = number;
+        foreach (var n in new[] { previous, number })
+        {
+            if (n is { } id && Store.Get(id) is { } entity && _map is not null)
+                await _map.UpsertAsync(entity, id == _selected);
+        }
+    }
+
+    private async Task StartFollowAsync()
+    {
+        if (_selected is not { } number || _map is null)
+            return;
+        _following = number;
+        await _map.StartFollowAsync(number);
+    }
+
+    private async Task OnBasemapChanged(ChangeEventArgs e)
+    {
+        if (_map is not null && e.Value is string id)
+            await _map.SetBasemapAsync(id);
+    }
+
+    public void Dispose()
+    {
+        Store.Changed -= OnStoreChanged;
+        // A dropped circuit must not leave an object "moving" forever.
+        if (_following is { } number)
+            Store.StopFollowing(number);
+    }
+}

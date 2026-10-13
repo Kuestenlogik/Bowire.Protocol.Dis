@@ -4,7 +4,7 @@
 namespace Kuestenlogik.Bowire.Protocol.Dis.Sandbox.Geo;
 
 /// <summary>A WGS84 position: degrees, degrees, metres above the ellipsoid.</summary>
-internal readonly record struct GeoPosition(double Latitude, double Longitude, double Altitude);
+public readonly record struct GeoPosition(double Latitude, double Longitude, double Altitude);
 
 /// <summary>Earth-centred, earth-fixed coordinates in metres: DIS world coordinates.</summary>
 internal readonly record struct Ecef(double X, double Y, double Z);

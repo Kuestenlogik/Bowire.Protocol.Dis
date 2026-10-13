@@ -1,0 +1,42 @@
+@implements IDisposable
+@inject PublisherStatus Status
+
+@if (Entities.Count == 0)
+{
+    <p class="hint">Noch keine Objekte. „Neues Objekt“, dann auf die Karte klicken.</p>
+}
+else
+{
+    <table>
+        <thead><tr><th></th><th>Nr.</th><th>Name</th><th>Typ</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var entity in Entities)
+            {
+                <tr class="@(entity.Number == Selected ? "selected" : "")" @onclick="() => SelectedChanged.InvokeAsync(entity.Number)">
+                    <td><span class="dot force-@((int)entity.Force)"></span></td>
+                    <td>@entity.Number</td>
+                    <td>@entity.Name</td>
+                    <td>@EntityPreset.Get(entity.PresetId).Label</td>
+                    <td>
+                        @if (Status.EncodeFailures.TryGetValue(entity.Number, out var failure))
+                        {
+                            <span class="error" title="@failure">⚠</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<SandboxEntity> Entities { get; set; } = [];
+    [Parameter] public ushort? Selected { get; set; }
+    [Parameter] public EventCallback<ushort> SelectedChanged { get; set; }
+
+    protected override void OnInitialized() => Status.Changed += OnStatusChanged;
+
+    private void OnStatusChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Status.Changed -= OnStatusChanged;
+}
