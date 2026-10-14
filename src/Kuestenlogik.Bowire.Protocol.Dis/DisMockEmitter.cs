@@ -93,9 +93,12 @@ public sealed class DisMockEmitter : IBowireMockEmitter
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _schedulerTask = Task.Run(() => RunAsync(disSteps, options, logger, _cts.Token), _cts.Token);
 
-        logger.LogInformation(
-            "dis-emitter listening → udp://{Group}:{Port} (ttl={Ttl}, pduSteps={Count}, rewrite={Rewrite})",
-            group, port, ttl, disSteps.Count, _rewrite?.ToString() ?? "none");
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "dis-emitter listening → udp://{Group}:{Port} (ttl={Ttl}, pduSteps={Count}, rewrite={Rewrite})",
+                group, port, ttl, disSteps.Count, _rewrite?.ToString() ?? "none");
+        }
         return Task.CompletedTask;
     }
 
@@ -196,7 +199,10 @@ public sealed class DisMockEmitter : IBowireMockEmitter
             var rewritten = _rewrite.Apply(payload, DateTimeOffset.UtcNow);
             if (rewritten is null)
             {
-                logger.LogDebug("dis-emitter filtered out step '{StepId}'.", step.Id);
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug("dis-emitter filtered out step '{StepId}'.", step.Id);
+                }
                 return;
             }
             payload = rewritten;
@@ -205,8 +211,11 @@ public sealed class DisMockEmitter : IBowireMockEmitter
         try
         {
             await _socket!.SendAsync(payload, payload.Length, _destination);
-            logger.LogInformation(
-                "dis-emit(step={StepId}, bytes={Bytes})", step.Id, payload.Length);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "dis-emit(step={StepId}, bytes={Bytes})", step.Id, payload.Length);
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -53,7 +53,10 @@ internal sealed class DisPublisher : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("DIS sandbox sending to udp://{Target}.", _status.Target);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("DIS sandbox sending to udp://{Target}.", _status.Target);
+        }
         using var timer = new PeriodicTimer(_tickInterval, _time);
         try
         {

@@ -5,11 +5,6 @@
     <PackageId>Kuestenlogik.Bowire.Protocol.Dis</PackageId>
     <PackageTags>bowire;bowire-plugin;dis;ieee-1278;simulation;udp;multicast;developer-tools</PackageTags>
     <IsPackable>true</IsPackable>
-    <!-- CA1873 fires on logger calls whose structured arguments are
-         property accesses — immaterial at this plugin's log volume,
-         and the source-generated LoggerMessage alternative is
-         overkill for a background broadcast scheduler. -->
-    <NoWarn>$(NoWarn);CA1873</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

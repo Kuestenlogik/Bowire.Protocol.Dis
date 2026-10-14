@@ -4,6 +4,7 @@
 namespace Kuestenlogik.Bowire.Protocol.Dis.Sandbox.Geo;
 
 /// <summary>A WGS84 position: degrees, degrees, metres above the ellipsoid.</summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "A parameter type of the public Blazor components (EntityEditor, EntityList, MapView).")]
 public readonly record struct GeoPosition(double Latitude, double Longitude, double Altitude);
 
 /// <summary>Earth-centred, earth-fixed coordinates in metres: DIS world coordinates.</summary>

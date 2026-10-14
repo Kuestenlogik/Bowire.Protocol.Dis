@@ -45,10 +45,6 @@ dotnet_diagnostic.CA1812.severity = none
 dotnet_diagnostic.CA1707.severity = none
 # CA1027: DisPduType etc. are wire-code enums, not bitflags.
 dotnet_diagnostic.CA1027.severity = none
-# CA1069: PDU type ids are family-scoped — Collision-Elastic (family 1 / id 40)
-# and Minefield Response NACK (family 8 / id 40) genuinely share the code
-# per IEEE 1278.1 §5.3.
-dotnet_diagnostic.CA1069.severity = none
 # CA1711: DIS uses "Flag" suffixes on 16-bit enumeration fields
 # (AcknowledgeFlag, ResponseFlag). The spec names take precedence
 # over the .NET naming convention.

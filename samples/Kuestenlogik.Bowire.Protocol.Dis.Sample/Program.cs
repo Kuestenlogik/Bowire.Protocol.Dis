@@ -52,6 +52,7 @@ app.Run();
 /// group, honouring the captured inter-frame cadence and looping on
 /// EOF so subscribers always see traffic.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Created by AddHostedService<T>().")]
 internal sealed class ConvoyReplayer(
     ILogger<ConvoyReplayer> logger,
     IHostApplicationLifetime lifetime) : BackgroundService
@@ -119,11 +120,14 @@ internal sealed class ConvoyReplayer(
         var destination = new IPEndPoint(group, port);
 
         var captureSpan = TimeSpan.FromMilliseconds(captureSpanMs);
-        logger.LogInformation(
-            "ConvoyReplayer streaming {Count} PDUs from \"{Name}\" → " +
-            "udp://{Group}:{Port} (ttl={Ttl}, captureSpan={Span}, looping on EOF). " +
-            "Point Bowire's DIS tab at the same group + port to observe.",
-            disSteps.Count, recording.Name, group, port, ttl, captureSpan);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "ConvoyReplayer streaming {Count} PDUs from \"{Name}\" → " +
+                "udp://{Group}:{Port} (ttl={Ttl}, captureSpan={Span}, looping on EOF). " +
+                "Point Bowire's DIS tab at the same group + port to observe.",
+                disSteps.Count, recording.Name, group, port, ttl, captureSpan);
+        }
 
         var emitted = 0L;
         try
@@ -169,9 +173,12 @@ internal sealed class ConvoyReplayer(
 
                     if (emitted == 1 || emitted % LogEveryNthFrame == 0)
                     {
-                        logger.LogInformation(
-                            "convoy-replay #{Count}: step={StepId}, bytes={Bytes}",
-                            emitted, step.Id, payload.Length);
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "convoy-replay #{Count}: step={StepId}, bytes={Bytes}",
+                                emitted, step.Id, payload.Length);
+                        }
                     }
                 }
 
@@ -188,7 +195,10 @@ internal sealed class ConvoyReplayer(
             // Expected on shutdown.
         }
 
-        logger.LogInformation("ConvoyReplayer stopping after {Count} PDUs.", emitted);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("ConvoyReplayer stopping after {Count} PDUs.", emitted);
+        }
     }
 
     private static (IPAddress Group, int Port, int Ttl) ReadNetworkConfig(RecordingStep first)

@@ -86,98 +86,169 @@ public enum DisPduType
     Other = 0,
 
     // ---- Family 1: Entity Information / Interaction ----
+    /// <summary>Entity State PDU.</summary>
     EntityState = 1,
+    /// <summary>Collision PDU.</summary>
     Collision = 4,
+    /// <summary>Collision Elastic PDU.</summary>
     CollisionElastic = 66,
+    /// <summary>Entity State Update PDU.</summary>
     EntityStateUpdate = 67,
+    /// <summary>Attribute PDU.</summary>
     Attribute = 72,
 
     // ---- Family 2: Warfare ----
+    /// <summary>Fire PDU.</summary>
     Fire = 2,
+    /// <summary>Detonation PDU.</summary>
     Detonation = 3,
+    /// <summary>Directed Energy Fire PDU.</summary>
     DirectedEnergyFire = 68,
+    /// <summary>Entity Damage Status PDU.</summary>
     EntityDamageStatus = 69,
 
     // ---- Family 3: Logistics ----
+    /// <summary>Service Request PDU.</summary>
     ServiceRequest = 5,
+    /// <summary>Resupply Offer PDU.</summary>
     ResupplyOffer = 6,
+    /// <summary>Resupply Received PDU.</summary>
     ResupplyReceived = 7,
+    /// <summary>Resupply Cancel PDU.</summary>
     ResupplyCancel = 8,
+    /// <summary>Repair Complete PDU.</summary>
     RepairComplete = 9,
+    /// <summary>Repair Response PDU.</summary>
     RepairResponse = 10,
 
     // ---- Family 5: Simulation Management ----
+    /// <summary>Create Entity PDU.</summary>
     CreateEntity = 11,
+    /// <summary>Remove Entity PDU.</summary>
     RemoveEntity = 12,
+    /// <summary>Start Resume PDU.</summary>
     StartResume = 13,
+    /// <summary>Stop Freeze PDU.</summary>
     StopFreeze = 14,
+    /// <summary>Acknowledge PDU.</summary>
     Acknowledge = 15,
+    /// <summary>Action Request PDU.</summary>
     ActionRequest = 16,
+    /// <summary>Action Response PDU.</summary>
     ActionResponse = 17,
+    /// <summary>Data Query PDU.</summary>
     DataQuery = 18,
+    /// <summary>Set Data PDU.</summary>
     SetData = 19,
+    /// <summary>Data PDU.</summary>
     Data = 20,
+    /// <summary>Event Report PDU.</summary>
     EventReport = 21,
+    /// <summary>Comment PDU.</summary>
     Comment = 22,
 
     // ---- Family 6: Distributed Emission Regeneration ----
+    /// <summary>Electromagnetic Emission PDU.</summary>
     ElectromagneticEmission = 23,
+    /// <summary>Designator PDU.</summary>
     Designator = 24,
+    /// <summary>Underwater Acoustic PDU.</summary>
     UnderwaterAcoustic = 29,
+    /// <summary>Supplemental Emission Entity State PDU.</summary>
     SupplementalEmissionEntityState = 30,
 
     // ---- Family 4: Radio Communications ----
+    /// <summary>Transmitter PDU.</summary>
     Transmitter = 25,
+    /// <summary>Signal PDU.</summary>
     Signal = 26,
+    /// <summary>Receiver PDU.</summary>
     Receiver = 27,
+    /// <summary>Intercom Signal PDU.</summary>
     IntercomSignal = 31,
+    /// <summary>Intercom Control PDU.</summary>
     IntercomControl = 32,
 
     // ---- Family 7: Entity Management ----
+    /// <summary>Aggregate State PDU.</summary>
     AggregateState = 33,
+    /// <summary>Is Group Of PDU.</summary>
     IsGroupOf = 34,
+    /// <summary>Transfer Ownership PDU.</summary>
     TransferOwnership = 35,
+    /// <summary>Is Part Of PDU.</summary>
     IsPartOf = 36,
 
     // ---- Family 8: Minefield ----
+    /// <summary>Minefield State PDU.</summary>
     MinefieldState = 37,
+    /// <summary>Minefield Query PDU.</summary>
     MinefieldQuery = 38,
+    /// <summary>Minefield Data PDU.</summary>
     MinefieldData = 39,
+    /// <summary>Minefield Response Nack PDU.</summary>
     MinefieldResponseNack = 40,
 
     // ---- Family 9: Synthetic Environment ----
+    /// <summary>Environmental Process PDU.</summary>
     EnvironmentalProcess = 41,
+    /// <summary>Gridded Data PDU.</summary>
     GriddedData = 42,
+    /// <summary>Point Object State PDU.</summary>
     PointObjectState = 43,
+    /// <summary>Linear Object State PDU.</summary>
     LinearObjectState = 44,
+    /// <summary>Areal Object State PDU.</summary>
     ArealObjectState = 45,
 
     // ---- Family 10: Simulation Management with Reliability ----
+    /// <summary>Create Entity-R PDU.</summary>
     CreateEntityR = 51,
+    /// <summary>Remove Entity-R PDU.</summary>
     RemoveEntityR = 52,
+    /// <summary>Start Resume-R PDU.</summary>
     StartResumeR = 53,
+    /// <summary>Stop Freeze-R PDU.</summary>
     StopFreezeR = 54,
+    /// <summary>Acknowledge-R PDU.</summary>
     AcknowledgeR = 55,
+    /// <summary>Action Request-R PDU.</summary>
     ActionRequestR = 56,
+    /// <summary>Action Response-R PDU.</summary>
     ActionResponseR = 57,
+    /// <summary>Data Query-R PDU.</summary>
     DataQueryR = 58,
+    /// <summary>Set Data-R PDU.</summary>
     SetDataR = 59,
+    /// <summary>Data-R PDU.</summary>
     DataR = 60,
+    /// <summary>Event Report-R PDU.</summary>
     EventReportR = 61,
+    /// <summary>Comment-R PDU.</summary>
     CommentR = 62,
+    /// <summary>Record-R PDU.</summary>
     RecordR = 63,
+    /// <summary>Set Record-R PDU.</summary>
     SetRecordR = 64,
+    /// <summary>Record Query-R PDU.</summary>
     RecordQueryR = 65,
 
     // ---- Family 11: Live Entity ----
+    /// <summary>Time Space Position Information PDU.</summary>
     TimeSpacePositionInformation = 46,
+    /// <summary>Appearance PDU.</summary>
     Appearance = 47,
+    /// <summary>Articulated Parts PDU.</summary>
     ArticulatedParts = 48,
+    /// <summary>Live Entity Fire PDU.</summary>
     LiveEntityFire = 49,
+    /// <summary>Live Entity Detonation PDU.</summary>
     LiveEntityDetonation = 50,
 
     // ---- Family 13: Information Operations (V7) ----
+    /// <summary>Information Operations Action PDU.</summary>
     InformationOperationsAction = 70,
+    /// <summary>Information Operations Report PDU.</summary>
     InformationOperationsReport = 71,
 }
 
