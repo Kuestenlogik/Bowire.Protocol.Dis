@@ -9,7 +9,7 @@
          interface. During local development consume from
          ../Bowire/artifacts/packages (see nuget.config); release
          builds resolve the same id from nuget.org. -->
-    <PackageVersion Include="Kuestenlogik.Bowire" Version="2.9.0" />
+    <PackageVersion Include="Kuestenlogik.Bowire" Version="2.9.1" />
 
     <!-- DIS sandbox sample: an independent DIS v7 encoder, so the sandbox
          tests Bowire's decoder against code it does not share. -->
