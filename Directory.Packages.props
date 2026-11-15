@@ -13,7 +13,7 @@
 
     <!-- DIS sandbox sample: an independent DIS v7 encoder, so the sandbox
          tests Bowire's decoder against code it does not share. -->
-    <PackageVersion Include="OpenDisNet" Version="1.2.0" />
+    <PackageVersion Include="OpenDisNet" Version="1.3.0" />
 
     <!-- Test-only -->
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
